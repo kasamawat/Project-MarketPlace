@@ -30,7 +30,7 @@ export default function FeaturedCategories(): React.ReactElement {
           <Link
             href={cat.href}
             key={cat.name}
-            className="group rounded-lg overflow-hidden shadow hover:shadow-lg transition"
+            className="group rounded-lg overflow-hidden shadow hover:shadow-lg transition border-1 border-solid border-gray-700 hover:border-gray-500"
           >
             <div className="relative h-48 w-full">
               <Image

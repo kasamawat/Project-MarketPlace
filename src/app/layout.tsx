@@ -1,30 +1,31 @@
 // app/layout.tsx หรือ app/root-layout.tsx
-import './globals.css'
-import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
-import Navbar from '../components/Navbar'
-import ScrollToTop from '../components/ScrollToTop'
+import "./globals.css";
+import type { Metadata } from "next";
+import { Inter } from "next/font/google";
+import Navbar from "../components/Navbar";
+import ScrollToTop from "../components/ScrollToTop";
+import { CartProvider } from "./context/CartContext";
 
-const inter = Inter({ subsets: ['latin'] })
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: 'MyShop',
-  description: 'E-commerce by you',
-}
+  title: "MyShop",
+  description: "E-commerce by you",
+};
 
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
   return (
     <html lang="en">
       <body className={inter.className}>
-        <Navbar />
-        <ScrollToTop />
-        <main className="min-h-screen">
-          {children}
-        </main>
+        <CartProvider>
+          <Navbar />
+          <ScrollToTop />
+          <main className="min-h-screen bg-gradient-to-b from-black to-[#1A0033]">{children}</main>
+        </CartProvider>
       </body>
     </html>
   );

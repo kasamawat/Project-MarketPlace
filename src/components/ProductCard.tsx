@@ -1,12 +1,17 @@
 import Image from "next/image";
 import { useState } from "react";
 import ProductPreviewModal from "@/components/modals/ProductPreviewModal";
+// import { useCart } from "@/app/context/CartContext";
+import Link from "next/link";
+import { link } from "fs";
 
 type Product = {
   id: number;
   name: string;
-  price: number;
+  category: string;
+  type: string;
   image: string;
+  price: number;
 };
 
 const styles = {
@@ -17,6 +22,7 @@ const styles = {
 };
 
 export default function ProductCard({ product }: { product: Product }) {
+  // const { addToCart } = useCart();
   const [onHover, setOnHover] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
 
@@ -28,13 +34,15 @@ export default function ProductCard({ product }: { product: Product }) {
           onMouseOver={() => setOnHover(true)}
           onMouseOut={() => setOnHover(false)}
         >
-          <Image
-            src={product.image}
-            alt={product.name}
-            width={400}
-            height={300}
-            className="w-full h-48 object-cover"
-          />
+          <Link href={`/products/${product.type.toLocaleLowerCase()}/${product.id}`}>
+            <Image
+              src={product.image}
+              alt={product.name}
+              width={400}
+              height={300}
+              className="w-full h-48 object-cover cursor-pointer"
+            />
+          </Link>
 
           <div
             className={`product-action flex justify-between ${
@@ -49,14 +57,12 @@ export default function ProductCard({ product }: { product: Product }) {
             >
               ❤️
             </div>
-            <div
+            <Link
+              href={`/products/${product.type.toLocaleLowerCase()}/${product.id}`}
               className={`w-4/6 ${styles.actionButton}`}
-              onClick={() =>
-                console.log(`Add to cart ${product.id} : ${product.name}`)
-              }
             >
-              เพิ่มในรถเข็น
-            </div>
+              View Details
+            </Link>
             <div
               className={`w-1/6 ${styles.actionButton} border-l border-gray-900`}
               onClick={() => {

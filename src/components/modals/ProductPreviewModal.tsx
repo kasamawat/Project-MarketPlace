@@ -1,12 +1,15 @@
 // components/ProductPreviewModal.tsx
 import React, { useEffect, useState } from "react";
 import Image from "next/image";
+import { useCart } from "@/app/context/CartContext";
 
 type Product = {
   id: number;
   name: string;
-  price: number;
+  category: string;
+  type: string;
   image: string;
+  price: number;
 };
 
 type Props = {
@@ -18,6 +21,8 @@ const ProductPreviewModal = ({
   product,
   onClose,
 }: Props): React.ReactElement => {
+  const { addToCart } = useCart();
+
   const opacitys = ["128GB", "256GB", "512GB"];
   const colors = ["#000000", "#ffffff", "#ff0000", "#00ff00", "#0000ff"];
 
@@ -79,7 +84,10 @@ const ProductPreviewModal = ({
             </h2>
             <div className="mb-2">
               <span className="text-green-600 font-semibold text-lg mt-4">
-                ฿{product.price.toLocaleString()}
+                ฿
+                {product.price.toLocaleString(undefined, {
+                  minimumFractionDigits: 2,
+                })}
               </span>
             </div>
             <div className="pb-8 mb-4 border-b-1 border-solid border-gray-600">
@@ -172,11 +180,7 @@ const ProductPreviewModal = ({
               <div className="col-span-2">
                 <button
                   className="w-full bg-gray-800 hover:bg-gray-700 text-white font-semibold py-3 px-4 rounded transition-colors duration-300 cursor-pointer"
-                  onClick={() =>
-                    console.log(
-                      `Add to cart: ${product.name}, Count: ${count}, Color: ${colorSelected}, Capacity: ${selected}`
-                    )
-                  }
+                  onClick={() => addToCart(product, count)}
                 >
                   Add to Cart
                 </button>
@@ -190,7 +194,10 @@ const ProductPreviewModal = ({
                       ? "bg-red-600 hover:bg-red-500 text-white"
                       : "bg-gray-800 hover:bg-gray-700 text-white"
                   }`}
-                  onClick={() => setIsWishlisted((prev) => !prev)}
+                  onClick={() => {
+                    setIsWishlisted((prev) => !prev);
+                    console.log(count);
+                  }}
                 >
                   {isWishlisted ? "❤️" : "🤍"}
                 </button>

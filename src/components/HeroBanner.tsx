@@ -2,6 +2,7 @@
 'use client';
 
 import { JSX, useState } from "react";
+import Link from "next/link";
 
 export default function HeroBanner(): JSX.Element {
 
@@ -16,12 +17,12 @@ export default function HeroBanner(): JSX.Element {
       </p>
 
       {/* CTA */}
-      <button className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 mt-8 rounded-full transition cursor-pointer" onClick={() => window.location.href = '/products'}>
+      <Link href="/products" className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 mt-8 rounded-full transition cursor-pointer">
         <span>SHOP NOW</span>
         <svg width="20" height="20" fill="none" viewBox="0 0 20 20">
           <path d="M4.166 10h11.667M15.833 10l-5.834 5.834M15.833 10L9.999 4.167" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
-      </button>
+      </Link>
 
       {/* Logos Placeholder */}
       <div className="overflow-hidden w-full relative max-w-5xl mx-auto select-none mt-16">

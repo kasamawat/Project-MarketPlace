@@ -25,8 +25,8 @@ export default function ProductListPage() {
     <div className="max-w-7xl mx-auto px-4 py-8">
       <Breadcrumbs
         paths={[
-          { name: "Home", href: "/" },
-          { name: "Products", href: "/products" },
+          { name: "Home", href: "/", status: "link" },
+          { name: "Products", href: "/products", status: "link" },
         ]}
       />
       <h1 className="text-2xl font-bold mb-4">Products</h1>
@@ -37,7 +37,7 @@ export default function ProductListPage() {
             href={cat.href}
             scroll={true}
             key={cat.name}
-            className="group rounded-lg overflow-hidden shadow hover:shadow-lg transition"
+            className="group rounded-lg overflow-hidden shadow hover:shadow-lg transition border-1 border-solid border-gray-700 hover:border-gray-500"
           >
             <div className="relative h-48 w-full">
               <Image

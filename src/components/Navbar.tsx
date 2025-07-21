@@ -2,10 +2,21 @@
 import { log } from "console";
 import Link from "next/link";
 import { JSX, use, useEffect, useState } from "react";
+import { useCart } from "@/app/context/CartContext";
+import { usePathname } from "next/navigation";
 
 export default function Navbar(): JSX.Element {
+  const { cartItems, removeFromCart } = useCart();
+  const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+  const totalPrice = cartItems.reduce(
+    (sum, item) => sum + item.price * item.quantity,
+    0
+  );
+
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [isCartOpen, setIsCartOpen] = useState(false);
+  const pathname = usePathname();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -20,11 +31,16 @@ export default function Navbar(): JSX.Element {
 
     return () => {
       window.removeEventListener("scroll", handleScroll);
+      setIsCartOpen(false);
     };
-  });
+  }, [pathname]);
 
   return (
-    <header className={`sticky top-0 z-50 w-full transition-colors duration-300 ${scrolled ? "bg-gray-900/90 shadow-md" : "bg-transparent"}`}>
+    <header
+      className={`sticky top-0 z-50 w-full transition-colors duration-300 ${
+        scrolled ? "bg-gray-900/90 shadow-md" : "bg-transparent"
+      }`}
+    >
       <nav className="flex items-center justify-between p-4 md:px-16 lg:px-24 xl:px-32 md:py-6 w-full z-20 relative">
         <Link href="/" className="font-bold text-xl">
           🛒 MyShop
@@ -37,37 +53,42 @@ export default function Navbar(): JSX.Element {
             Home
           </Link>
 
-          <div className="relative group flex items-center gap-1 cursor-pointer">
-            {/* <span className="hover:text-gray-300">Products</span> */}
-            <Link className="hover:text-gray-300" href="/products">Products</Link>
-            <svg width="18" height="18" fill="none" viewBox="0 0 18 18">
-              <path
-                d="m4.5 7.2 3.793 3.793a1 1 0 0 0 1.414 0L13.5 7.2"
-                stroke="white"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-            <div className="absolute bg-slate-900 font-normal flex flex-col gap-2 w-max rounded-lg p-4 top-36 left-0 opacity-0 -translate-y-full group-hover:top-44 group-hover:opacity-100 transition-all duration-300">
-              <a
+          <div className="relative group">
+            <div className="flex items-center gap-1 cursor-pointer">
+              <Link className="hover:text-gray-300" href="/products">
+                Products
+              </Link>
+              <svg width="18" height="18" fill="none" viewBox="0 0 18 18">
+                <path
+                  d="m4.5 7.2 3.793 3.793a1 1 0 0 0 1.414 0L13.5 7.2"
+                  stroke="white"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </div>
+
+            {/* Dropdown */}
+            <div className="absolute left-0 mt-2 bg-slate-900 font-normal flex flex-col gap-2 w-max rounded-lg p-4 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50">
+              <Link
                 href="/products/electronics"
                 className="hover:translate-x-1 hover:text-slate-500 transition-all"
               >
                 Electronic
-              </a>
-              <a
+              </Link>
+              <Link
                 href="/products/fashion"
                 className="hover:translate-x-1 hover:text-slate-500 transition-all"
               >
                 Fashion
-              </a>
-              <a
+              </Link>
+              <Link
                 href="/products/furniture"
                 className="hover:translate-x-1 hover:text-slate-500 transition-all"
               >
                 Furniture
-              </a>
+              </Link>
             </div>
           </div>
 
@@ -112,25 +133,92 @@ export default function Navbar(): JSX.Element {
             </svg>
           </div>
 
-          <div className="relative cursor-pointer">
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 14 14"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
+          {/* Cart */}
+          <div className="relative">
+            <div
+              className="cursor-pointer"
+              onClick={() => setIsCartOpen(!isCartOpen)}
             >
-              <path
-                d="M.583.583h2.333l1.564 7.81a1.17 1.17 0 0 0 1.166.94h5.67a1.17 1.17 0 0 0 1.167-.94l.933-4.893H3.5m2.333 8.75a.583.583 0 1 1-1.167 0 .583.583 0 0 1 1.167 0m6.417 0a.583.583 0 1 1-1.167 0 .583.583 0 0 1 1.167 0"
-                stroke="#615fff"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
+              <svg
+                width="22"
+                height="22"
+                viewBox="0 0 14 14"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M.583.583h2.333l1.564 7.81a1.17 1.17 0 0 0 1.166.94h5.67a1.17 1.17 0 0 0 1.167-.94l.933-4.893H3.5m2.333 8.75a.583.583 0 1 1-1.167 0 .583.583 0 0 1 1.167 0m6.417 0a.583.583 0 1 1-1.167 0 .583.583 0 0 1 1.167 0"
+                  stroke="#615fff"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              {totalItems > 0 && (
+                <span className="absolute -top-2 -right-2 text-xs bg-indigo-500 text-white rounded-full w-[18px] h-[18px] flex items-center justify-center">
+                  {totalItems}
+                </span>
+              )}
+            </div>
 
-            <button className="absolute -top-2 -right-3 text-xs text-white bg-indigo-500 w-[18px] h-[18px] rounded-full">
-              3
-            </button>
+            {/* Dropdown */}
+            {isCartOpen && (
+              <div className="absolute right-0 mt-9 w-92 bg-gray-900 shadow-lg rounded-lg p-4 z-50">
+                <ul className="divide-y divide-gray-200 max-h-64 overflow-y-auto">
+                  {cartItems.map((item) => (
+                    <li
+                      key={item.id}
+                      className="py-2 text-sm flex justify-between"
+                    >
+                      <div>
+                        <p className="font-medium">{item.name}</p>
+                        <p className="text-gray-500">Qty: {item.quantity}</p>
+                        <p className="font-semibold">
+                          {(item.price * item.quantity).toFixed(2)}฿
+                        </p>
+                      </div>
+                      <button
+                        className="w-5 h-full text-sm text-white hover:text-gray-700 cursor-pointer bg-red-500 border-circles rounded-full "
+                        onClick={() => removeFromCart(item.id)}
+                      >
+                        x
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+
+                {cartItems.length > 0 ? (
+                  <div className="border-t mt-3 pt-3">
+                    <p className="text-sm text-white mb-2">
+                      Total:{" "}
+                      <span className="font-bold text-white">
+                        {totalPrice.toLocaleString(undefined, {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                        ฿
+                      </span>
+                    </p>
+                    <div className="flex gap-2">
+                      <Link
+                        href="/cart"
+                        className="w-1/2 text-center py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded text-gray-800 cursor-pointer"
+                      >
+                        View Cart
+                      </Link>
+                      <button className="w-1/2 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 rounded text-white cursor-pointer">
+                        Checkout
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <p className="text-sm text-center text-white mb-2">
+                      No items added to cart
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           <button className="cursor-pointer px-8 py-2 bg-indigo-500 hover:bg-indigo-600 transition text-white rounded-full">
