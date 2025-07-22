@@ -1,5 +1,6 @@
 "use client";
 
+import { Product } from "@/types/product.types";
 import {
   createContext,
   useContext,
@@ -9,21 +10,12 @@ import {
   use,
 } from "react";
 
-type Product = {
-  id: number;
-  name: string;
-  category: string;
-  type: string;
-  image: string;
-  price: number;
-};
-
 type CartItem = Product & { quantity: number };
 
 type CartContextType = {
   cartItems: CartItem[];
   addToCart: (product: Product, quantity?: number) => void;
-  removeFromCart: (productId: number) => void;
+  removeFromCart: (productId: string | number) => void;
   clearCart: () => void;
 };
 
@@ -46,6 +38,8 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   }, [cartItems]);
 
   const addToCart = (product: Product, quantity = 1) => {
+    console.log(product,'product');
+    
     setCartItems((prevCart) => {
       const existing = prevCart.find((item) => item.id === product.id);
       if (existing) {
@@ -59,7 +53,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
-  const removeFromCart = (productId: number) => {
+  const removeFromCart = (productId: string | number) => {
     setCartItems((prevCart) =>
       prevCart.filter((item) => item.id !== productId)
     );

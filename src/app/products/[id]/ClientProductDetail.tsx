@@ -6,27 +6,19 @@ import { Product } from "@/types/product.types";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import { FaStar, FaStarHalfAlt, FaRegStar } from "react-icons/fa"; // ใส่ไว้ด้านบนของไฟล์
 import { useCart } from "@/app/context/CartContext";
+import Link from "next/link";
 
 const mockStart = 4.5; // ตัวอย่างค่า rating ที่ใช้แสดงดาว
 const opacitys = ["128GB", "256GB", "512GB"];
 const colors = ["#000000", "#ffffff", "#ff0000", "#00ff00", "#0000ff"];
 
-export default function ClientProductDetail({
-  product,
-  type,
-}: {
-  product: Product;
-  type: string;
-}) {
-  const type_ = type.toLowerCase();
+export default function ClientProductDetail({ product }: { product: Product }) {
   //   const product = await getProduct(type_, id);
   const [selected, setSelected] = useState<string | null>(opacitys[0]);
   const [colorSelected, setColorSelected] = useState<string | null>(colors[0]);
   const [count, setCount] = useState(1);
   const [isWishlisted, setIsWishlisted] = useState(false);
   const { addToCart } = useCart();
-
-  console.log(product, "product");
 
   if (!product) {
     notFound();
@@ -38,11 +30,6 @@ export default function ClientProductDetail({
           paths={[
             { name: "Home", href: "/", status: "link" },
             { name: "Products", href: "/products", status: "link" },
-            {
-              name: type_.charAt(0).toUpperCase() + type_.slice(1),
-              href: `/products/${type_}`,
-              status: "link",
-            },
             {
               name: product.name,
               href: "",
@@ -72,6 +59,17 @@ export default function ClientProductDetail({
               })}
             </p>
           </div>
+          <div className="mb-2">
+            <h3 className="text-md font-bold text-sm">
+              Sold By:{" "}
+              <Link
+                href={`/stores/${product.store.id}`}
+                className="text-blue-600 hover:underline text-sm"
+              >
+                {product.store.name}
+              </Link>
+            </h3>
+          </div>
           <div className="flex items-center text-yellow-400 text-lg mt-4">
             {[1, 2, 3, 4, 5].map((i) =>
               i <= Math.floor(mockStart) ? (
@@ -86,7 +84,7 @@ export default function ClientProductDetail({
               ({mockStart} / 5)
             </span>
           </div>
-          <div className="pb-8 mb-4 border-b-1 border-solid border-gray-600 mt-4">
+          <div className="pb-8 mt-4 mb-4 border-b-1 border-solid border-gray-600">
             <span className="text-white text-ld">
               Lorem ipsum dolor sit amet consectetur adipisicing elit. Maxime
               pariatur quod at nobis officia corporis consequatur ducimus ipsa,

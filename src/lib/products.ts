@@ -1,40 +1,17 @@
 import { Product, ProductType } from "@/types/product.types";
-import { fashionProducts } from "./mockFashion";
-import { electronicsProducts } from "./mockElectronics";
-import { furnitureProducts } from "./mockFurniture";
+import { allProducts } from "./mockOwner1";
 
-export async function getFashionProducts(): Promise<Product[]> {
-  return fashionProducts;
-}
-
-export async function getElectronicsProducts(): Promise<Product[]> {
-  return electronicsProducts;
-}
-
-export async function getFurnitureProducts(): Promise<Product[]> {
-  return furnitureProducts;
+export async function getAllProducts(): Promise<Product[]> {
+  return allProducts;
 }
 
 export async function getProduct(
-  type: ProductType,
-  id: string
+  id: string | number
 ): Promise<Product | null> {
   let products: Product[] = [];
 
-  switch (type) {
-    case ProductType.Fashion:
-      products = await getFashionProducts();
-      break;
-    case ProductType.Electronics:
-      products = await getElectronicsProducts();
-      break;
-    case ProductType.Furniture:
-      products = await getFurnitureProducts();
-      break;
-    default:
-      return null;
-  }
+  products = await getAllProducts();
 
-  const productId = parseInt(id, 10);
+  const productId = id;
   return products.find((p) => p.id === productId) || null;
 }

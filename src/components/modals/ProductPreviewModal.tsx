@@ -2,20 +2,16 @@
 import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import { useCart } from "@/app/context/CartContext";
-
-type Product = {
-  id: number;
-  name: string;
-  category: string;
-  type: string;
-  image: string;
-  price: number;
-};
+import { Product } from "@/types/product.types";
+import Link from "next/link";
+import { FaRegStar, FaStar, FaStarHalfAlt } from "react-icons/fa";
 
 type Props = {
   product: Product;
   onClose: () => void;
 };
+
+const mockStart = 4.5;
 
 const ProductPreviewModal = ({
   product,
@@ -90,7 +86,32 @@ const ProductPreviewModal = ({
                 })}
               </span>
             </div>
-            <div className="pb-8 mb-4 border-b-1 border-solid border-gray-600">
+            <div className="mb-2">
+              <h3 className="text-md font-bold text-sm">
+                Sold By:{" "}
+                <Link
+                  href={`/stores/${product.store.id}`}
+                  className="text-blue-600 hover:underline text-sm"
+                >
+                  {product.store.name}
+                </Link>
+              </h3>
+            </div>
+            <div className="flex items-center text-yellow-400 text-lg mt-4">
+              {[1, 2, 3, 4, 5].map((i) =>
+                i <= Math.floor(mockStart) ? (
+                  <FaStar key={i} />
+                ) : i - 0.5 === mockStart ? (
+                  <FaStarHalfAlt key={i} />
+                ) : (
+                  <FaRegStar key={i} />
+                )
+              )}
+              <span className="ml-2 text-lg text-gray-400">
+                ({mockStart} / 5)
+              </span>
+            </div>
+            <div className="pb-8 mt-4 mb-4 border-b-1 border-solid border-gray-600">
               <span className="text-white text-sm">
                 Lorem ipsum dolor sit amet consectetur adipisicing elit. Minus
                 ut asperiores rem consectetur quae suscipit sint dicta excepturi

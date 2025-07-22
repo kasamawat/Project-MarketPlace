@@ -3,10 +3,11 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { useCart } from "@/app/context/CartContext";
+import Link from "next/link";
 
 export default function ClientCart() {
   //   const [cart, setCart] = useState<CartItem[]>([]);
-  const { cartItems, removeFromCart, addToCart } = useCart();
+  const { cartItems, removeFromCart, addToCart, clearCart } = useCart();
 
   useEffect(() => {
     // โหลด cart จาก localStorage หรือ context
@@ -22,11 +23,22 @@ export default function ClientCart() {
   );
 
   return (
-    <div className="">
+    <div>
       {cartItems.length === 0 ? (
-        <p className="text-white">Not Have Item in Cart</p>
+        <div className="flex flex-col items-center justify-center h-full space-y-4">
+          <p className="text-white">No items found in cart</p>
+          <Link
+            className="bg-gray-800 hover:bg-gray-700 text-white font-semibold py-3 px-4 rounded transition-colors duration-300"
+            href="/products"
+          >
+            CONTINUE SHOPPING
+          </Link>
+        </div>
       ) : (
         <>
+          <h1 className="flex text-2xl font-bold mb-4 text-white">
+            Your cart items
+          </h1>
           <div className="grid grid-cols-6 gap-4 text-center border border-gray-600 p-4">
             <div className="col-span-1">
               <h2 className="text-white font-medium">IMAGE</h2>
@@ -52,15 +64,18 @@ export default function ClientCart() {
               key={item.id}
               className="grid grid-cols-6 gap-4 text-center border border-gray-600 p-4"
             >
-              <div className="col-span-1 flex items-center justify-center">
+              <Link
+                href={`/products/${item.id}`}
+                className="col-span-1 flex items-center justify-center"
+              >
                 <Image
                   src={item.image}
                   alt={item.name}
                   width={800}
                   height={600}
-                  className="w-40 h-40 object-cover rounded mr-4 ml-4 mt-2 mb-2 border-1 border-solid border-gray-600"
+                  className="w-40 h-50 object-cover rounded mr-4 ml-4 mt-2 mb-2 border-1 border-solid border-gray-600"
                 />
-              </div>
+              </Link>
               <div className="col-span-1 flex items-center justify-center">
                 <h2 className="text-white font-medium">{item.name}</h2>
               </div>
@@ -114,15 +129,53 @@ export default function ClientCart() {
               </div>
             </div>
           ))}
+          <div className="flex justify-between items-center mt-10 mb-10">
+            <Link
+              className="bg-gray-800 hover:bg-gray-700 text-white font-semibold py-3 px-4 rounded transition-colors duration-300"
+              href="/products"
+            >
+              CONTINUE SHOPING
+            </Link>
+            <button
+              className="bg-gray-800 hover:bg-gray-700 text-white font-semibold py-3 px-4 rounded transition-colors duration-300 cursor-pointer"
+              onClick={() => clearCart()}
+            >
+              CLEAR SHOPPING CART
+            </button>
+          </div>
         </>
       )}
 
       {cartItems.length > 0 && (
-        <div className="pt-4 text-right">
-          <h3 className="text-xl font-bold text-white">
-            Cart Total: ฿
-            {total.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-          </h3>
+        <div className="grid grid-cols-3">
+          <div className="col-span-1 bg-gray-800 m-3 p-6">
+            <h1 className="text-lg font-bold text-white mb-6">
+              Estimate Shipping And Tax
+            </h1>
+            <p className="text-sm">
+              Lorem ipsum dolor sit, amet consectetur adipisicing elit. Ipsum
+              porro laborum atque dolorem nostrum, optio minima fuga eum libero
+              quam necessitatibus blanditiis, nemo nobis temporibus a expedita
+              dolorum illo ratione.
+            </p>
+          </div>
+          <div className="col-span-1 bg-gray-800 m-3 p-6">
+            <h1 className="text-lg font-bold text-white mb-6">
+              Use Coupon Code
+            </h1>
+            <p className="text-sm">Enter Your Code</p>
+          </div>
+          <div className="col-span-1 bg-gray-800 m-3 p-6">
+            <h1 className="text-lg font-bold text-white mb-6">Cart Total</h1>
+            <div className="flex justify-between">
+              <p className="text-lg text-green-500 font-semibold">
+                Total products
+              </p>
+              <p className="text-lg text-green-500 font-semibold">
+                ฿{total.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+              </p>
+            </div>
+          </div>
         </div>
       )}
     </div>

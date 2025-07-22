@@ -13,8 +13,9 @@ export default function CartPage() {
           ]}
         />
       </div>
-      <h1 className="text-2xl font-bold mb-4 text-white">Your cart items</h1>
-      <ClientCart />
+      <div className="flex items-center justify-center">
+        <ClientCart />
+      </div>
     </div>
   );
 }

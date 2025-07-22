@@ -43,7 +43,13 @@ export default function ProductListClient({ products }: Props) {
           <FilterSidebar
             category="electronics"
             filters={allFilters}
-            onFilterChange={setFilters}
+            onFilterChange={(newFilters) =>
+              setFilters({
+                category: newFilters.category ?? "",
+                tag: newFilters.tag ?? "",
+                type: newFilters.type ?? "",
+              })
+            }
           />
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">

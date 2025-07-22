@@ -4,15 +4,7 @@ import ProductPreviewModal from "@/components/modals/ProductPreviewModal";
 // import { useCart } from "@/app/context/CartContext";
 import Link from "next/link";
 import { link } from "fs";
-
-type Product = {
-  id: number;
-  name: string;
-  category: string;
-  type: string;
-  image: string;
-  price: number;
-};
+import { Product } from "@/types/product.types";
 
 const styles = {
   actionHidden: "opacity-0 transition-opacity duration-500",
@@ -34,13 +26,16 @@ export default function ProductCard({ product }: { product: Product }) {
           onMouseOver={() => setOnHover(true)}
           onMouseOut={() => setOnHover(false)}
         >
-          <Link href={`/products/${product.type.toLocaleLowerCase()}/${product.id}`}>
+          <Link
+            href={`/products/${product.id}`}
+            className="group rounded-lg overflow-hidden shadow hover:shadow-lg transition"
+          >
             <Image
               src={product.image}
               alt={product.name}
               width={400}
               height={300}
-              className="w-full h-48 object-cover cursor-pointer"
+              className="w-full h-48 object-cover object-cover group-hover:scale-105 transition-transform duration-300"
             />
           </Link>
 
@@ -58,7 +53,7 @@ export default function ProductCard({ product }: { product: Product }) {
               ❤️
             </div>
             <Link
-              href={`/products/${product.type.toLocaleLowerCase()}/${product.id}`}
+              href={`/products/${product.id}`}
               className={`w-4/6 ${styles.actionButton}`}
             >
               View Details
@@ -76,6 +71,15 @@ export default function ProductCard({ product }: { product: Product }) {
         </div>
 
         <div className="mt-4 text-center">
+          {/* <p className="text-sm mb-2">
+            จากร้าน{" "}
+            <Link
+              href={`/stores/${product.store.id}`}
+              className="text-blue-600 hover:underline"
+            >
+              {product.store.name}
+            </Link>
+          </p> */}
           <h2 className="text-white font-semibold text-lg">{product.name}</h2>
           <p className="text-green-400 mt-1 font-bold">
             ฿{product.price.toLocaleString()}

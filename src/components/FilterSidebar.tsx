@@ -10,19 +10,27 @@ type FilterSidebarProps = {
     types: string[];
   };
   onFilterChange: (filters: {
-    category?: string;
-    tag?: string;
-    type?: string;
+    category?: string | null;
+    tag?: string | null;
+    type?: string | null;
   }) => void;
 };
 
-export default function FilterSidebar({ category, filters, onFilterChange }: FilterSidebarProps) {
+export default function FilterSidebar({
+  category,
+  filters,
+  onFilterChange,
+}: FilterSidebarProps) {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [selectedType, setSelectedType] = useState<string | null>(null);
 
   const handleChange = (type: "category" | "tag" | "type", value: string) => {
-    const update = { category: selectedCategory, tag: selectedTag, type: selectedType };
+    const update = {
+      category: selectedCategory,
+      tag: selectedTag,
+      type: selectedType,
+    };
 
     if (type === "category") {
       setSelectedCategory(value);
@@ -34,6 +42,9 @@ export default function FilterSidebar({ category, filters, onFilterChange }: Fil
       setSelectedType(value);
       update.type = value;
     }
+
+    console.log(update,"update");
+    
 
     onFilterChange(update);
   };
@@ -48,7 +59,9 @@ export default function FilterSidebar({ category, filters, onFilterChange }: Fil
               <button
                 onClick={() => handleChange("category", item)}
                 className={`block text-left w-full ${
-                  selectedCategory === item ? "text-blue-600 font-bold" : "text-gray-700"
+                  selectedCategory === item
+                    ? "text-blue-600 font-bold"
+                    : "text-gray-700"
                 }`}
               >
                 {item}
@@ -66,7 +79,9 @@ export default function FilterSidebar({ category, filters, onFilterChange }: Fil
               <button
                 onClick={() => handleChange("tag", item)}
                 className={`block text-left w-full ${
-                  selectedTag === item ? "text-blue-600 font-bold" : "text-gray-700"
+                  selectedTag === item
+                    ? "text-blue-600 font-bold"
+                    : "text-gray-700"
                 }`}
               >
                 {item}
@@ -84,7 +99,9 @@ export default function FilterSidebar({ category, filters, onFilterChange }: Fil
               <button
                 onClick={() => handleChange("type", item)}
                 className={`block text-left w-full ${
-                  selectedType === item ? "text-blue-600 font-bold" : "text-gray-700"
+                  selectedType === item
+                    ? "text-blue-600 font-bold"
+                    : "text-gray-700"
                 }`}
               >
                 {item}
