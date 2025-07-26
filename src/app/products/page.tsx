@@ -1,7 +1,5 @@
 import Breadcrumbs from "@/components/Breadcrumbs";
-import { Product } from "@/types/product.types";
-import Image from "next/image";
-import Link from "next/link";
+import { Product } from "@/types/product/product.types";
 import { getAllProducts } from "@/lib/products";
 import { notFound } from "next/navigation";
 import ProductListClient from "./ProductListClient";
@@ -19,8 +17,8 @@ export default async function ProductListPage() {
       <div className="flex items-center justify-between mb-6">
         <Breadcrumbs
           paths={[
-            { name: "Home", href: "/", status: "link" },
-            { name: "Products", href: "/products", status: "link" },
+            { name: "HOME", href: "/", status: "link" },
+            { name: "PRODUCTS", href: "/products", status: "disabled" },
           ]}
         />
       </div>

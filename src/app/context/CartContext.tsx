@@ -1,6 +1,6 @@
 "use client";
 
-import { Product } from "@/types/product.types";
+import { Product } from "@/types/product/product.types";
 import {
   createContext,
   useContext,

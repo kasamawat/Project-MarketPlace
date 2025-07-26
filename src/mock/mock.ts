@@ -1,24 +1,6 @@
-import { Product, ProductCategory, ProductType } from "@/types/product.types";
-import { Store } from "@/types/store.types";
-
-// Mock Stores
-export const stores: Store[] = [
-  {
-    id: "store-001",
-    name: "Tech Haven",
-    description: "ร้านสินค้าอิเล็กทรอนิกส์ทันสมัยทุกชนิด",
-    image: "/images/store1.jpg",
-    ownerId: "test-1",
-
-  },
-  {
-    id: "store-002",
-    name: "Home & Fashion",
-    description: "แฟชั่นและเฟอร์นิเจอร์สำหรับทุกคน",
-    image: "/images/store2.jpg",
-    ownerId: "test-2"
-  },
-];
+import { ProductCategory } from "@/types/product/enums/product-category.enum";
+import { ProductType } from "@/types/product/enums/product-type.enum";
+import { Product } from "@/types/product/product.types";
 
 // Products for Store 1
 export const owner1Products: Product[] = [
@@ -30,7 +12,8 @@ export const owner1Products: Product[] = [
     image: "/images/electronics1.jpg",
     description: "A high-end smartphone with a sleek design and powerful features.",
     price: 699.99,
-    stock: 10,
+    variants: [],
+    attributes: [],
     storeId: "store-001",
     store: {
       id: "store-001",
@@ -38,7 +21,6 @@ export const owner1Products: Product[] = [
       description: "ร้านสินค้าอิเล็กทรอนิกส์ทันสมัยทุกชนิด",
       image: "/images/store1.jpg",
       ownerId: "test-1",
-
     },
   },
   {
@@ -49,7 +31,8 @@ export const owner1Products: Product[] = [
     image: "/images/electronics2.jpg",
     description: "A lightweight laptop with a long-lasting battery and high performance.",
     price: 1299.99,
-    stock: 10,
+    variants: [],
+    attributes: [],
     storeId: "store-001",
     store: {
       id: "store-001",
@@ -57,7 +40,6 @@ export const owner1Products: Product[] = [
       description: "ร้านสินค้าอิเล็กทรอนิกส์ทันสมัยทุกชนิด",
       image: "/images/store1.jpg",
       ownerId: "test-1",
-
     },
   },
 ];
@@ -72,7 +54,8 @@ export const owner2Products: Product[] = [
     image: "/images/fashion1.jpg",
     description: "A comfortable white t-shirt made from 100% cotton.",
     price: 19.99,
-    stock: 10,
+    variants: [],
+    attributes: [],
     storeId: "store-002",
     store: {
       id: "store-002",
@@ -90,7 +73,8 @@ export const owner2Products: Product[] = [
     image: "/images/fashion2.jpg",
     description: "A stylish denim jacket perfect for casual outings.",
     price: 49.99,
-    stock: 10,
+    variants: [],
+    attributes: [],
     storeId: "store-002",
     store: {
       id: "store-002",
@@ -108,7 +92,8 @@ export const owner2Products: Product[] = [
     image: "/images/furniture1.jpg",
     description: "A classic wooden chair with a comfortable design.",
     price: 39.99,
-    stock: 10,
+    variants: [],
+    attributes: [],
     storeId: "store-002",
     store: {
       id: "store-002",
@@ -126,7 +111,8 @@ export const owner2Products: Product[] = [
     image: "/images/furniture2.jpg",
     description: "A stylish modern sofa that fits any living room.",
     price: 299.99,
-    stock: 10,
+    variants: [],
+    attributes: [],
     storeId: "store-002",
     store: {
       id: "store-002",
@@ -144,7 +130,8 @@ export const owner2Products: Product[] = [
     image: "/images/furniture3.jpg",
     description: "A spacious bookshelf perfect for organizing your books.",
     price: 79.99,
-    stock: 10,
+    variants: [],
+    attributes: [],
     storeId: "store-002",
     store: {
       id: "store-002",
@@ -162,7 +149,8 @@ export const owner2Products: Product[] = [
     image: "/images/furniture4.jpg",
     description: "A beautiful dining table that seats six people.",
     price: 249.99,
-    stock: 10,
+    variants: [],
+    attributes: [],
     storeId: "store-002",
     store: {
       id: "store-002",

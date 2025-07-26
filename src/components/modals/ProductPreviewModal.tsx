@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import { useCart } from "@/app/context/CartContext";
-import { Product } from "@/types/product.types";
+import { Product } from "@/types/product/product.types";
 import Link from "next/link";
 import { FaRegStar, FaStar, FaStarHalfAlt } from "react-icons/fa";
 

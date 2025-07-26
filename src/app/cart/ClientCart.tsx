@@ -5,6 +5,15 @@ import Image from "next/image";
 import { useCart } from "@/app/context/CartContext";
 import Link from "next/link";
 
+const colNames = [
+  "IMAGE",
+  "PRODUCT NAME",
+  "UNIT PRICE",
+  "QTY",
+  "SUBTOTAL",
+  "ACTION",
+];
+
 export default function ClientCart() {
   //   const [cart, setCart] = useState<CartItem[]>([]);
   const { cartItems, removeFromCart, addToCart, clearCart } = useCart();
@@ -40,24 +49,11 @@ export default function ClientCart() {
             Your cart items
           </h1>
           <div className="grid grid-cols-6 gap-4 text-center border border-gray-600 p-4">
-            <div className="col-span-1">
-              <h2 className="text-white font-medium">IMAGE</h2>
-            </div>
-            <div className="col-span-1">
-              <h2 className="text-white font-medium">PRODUCT NAME</h2>
-            </div>
-            <div className="col-span-1">
-              <h2 className="text-white font-medium">UNIT PRICE</h2>
-            </div>
-            <div className="col-span-1">
-              <h2 className="text-white font-medium">QTY</h2>
-            </div>
-            <div className="col-span-1">
-              <h2 className="text-white font-medium">SUBTOTAL</h2>
-            </div>
-            <div className="col-span-1">
-              <h2 className="text-white font-medium">ACTION</h2>
-            </div>
+            {colNames.map((item, idx) => (
+              <div key={idx} className="col-span-1">
+                <h2 className="text-white font-medium">{item}</h2>
+              </div>
+            ))}
           </div>
           {cartItems.map((item) => (
             <div
@@ -167,13 +163,18 @@ export default function ClientCart() {
           </div>
           <div className="col-span-1 bg-gray-800 m-3 p-6">
             <h1 className="text-lg font-bold text-white mb-6">Cart Total</h1>
-            <div className="flex justify-between">
+            <div className="flex justify-between mb-6">
               <p className="text-lg text-green-500 font-semibold">
                 Total products
               </p>
               <p className="text-lg text-green-500 font-semibold">
                 ฿{total.toLocaleString(undefined, { minimumFractionDigits: 2 })}
               </p>
+            </div>
+            <div className="flex justify-center text-center mr-4 ml-4">
+              <Link href="checkout" className="w-full mt-4 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700">
+                Proceed to Checkout
+              </Link>
             </div>
           </div>
         </div>

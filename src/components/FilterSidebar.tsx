@@ -43,7 +43,7 @@ export default function FilterSidebar({
       update.type = value;
     }
 
-    console.log(update,"update");
+    // console.log(update,"update");
     
 
     onFilterChange(update);

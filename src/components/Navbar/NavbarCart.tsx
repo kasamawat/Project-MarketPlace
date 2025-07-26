@@ -47,7 +47,8 @@ const NavbarCart: React.FC = () => {
   }, []);
 
   return (
-    <div className="hidden sm:flex items-center gap-8">
+    // hidden sm:flex items-center gap-8
+    <div className="items-center gap-8">
       {/* Cart */}
       <div className="relative">
         <div
@@ -85,20 +86,20 @@ const NavbarCart: React.FC = () => {
             <ul className="divide-y divide-gray-200 max-h-72 overflow-y-auto">
               {cartItems.map((item) => (
                 <li key={item.id} className="py-2 text-sm flex justify-between">
-                  <div className="grid grid-cols-5 flex items-center gap-2">
-                    <div className="p-2 col-span-2 justify-center">
+                  <div className="grid grid-cols-6 flex items-center gap-2">
+                    <div className="p-2 col-span-2 flex items-center justify-center">
                       <Link href={`/products/${item.id}`}>
                         <Image
                           src={item.image}
                           alt={item.name}
-                          width={40}
-                          height={40}
+                          width={25}
+                          height={28}
                           className="w-25 h-28 object-cover rounded-md shadow rounded border-1 border-solid border-gray-600"
                         />
                       </Link>
                     </div>
-                    <div className="col-span-2">
-                      <p className="font-medium">{item.name}</p>
+                    <div className="col-span-3 justify-center gap-1">
+                      <p className="font-medium break-words">{item.name}</p>
                       <p className="text-gray-500">Qty: {item.quantity}</p>
                       <p className="font-semibold">
                         {(item.price * item.quantity).toFixed(2)}฿
@@ -154,9 +155,12 @@ const NavbarCart: React.FC = () => {
                   >
                     View Cart
                   </Link>
-                  <button className="w-1/2 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 rounded text-white cursor-pointer">
+                  <Link
+                    href="/checkout"
+                    className="w-1/2 text-center py-2 text-sm bg-indigo-600 hover:bg-indigo-700 rounded text-white cursor-pointer"
+                  >
                     Checkout
-                  </button>
+                  </Link>
                 </div>
               </div>
             ) : (

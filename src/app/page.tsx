@@ -1,7 +1,7 @@
 import Image from "next/image";
 import HeroBanner from "@/components/HeroBanner";
 import RecommendedItems from "@/components/RecommendedItems";
-import FeaturedProducts from "@/components/FeaturedProducts";
+// import FeaturedProducts from "@/components/FeaturedProducts";
 import Footer from "@/components/Footer";
 
 export default function Home() {
@@ -9,7 +9,7 @@ export default function Home() {
     <div className="font-sans">
       <HeroBanner />
       <RecommendedItems/>
-      <FeaturedProducts/>
+      {/* <FeaturedProducts/> */}
       <Footer/>
     </div>
   );

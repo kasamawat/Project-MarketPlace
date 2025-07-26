@@ -1,10 +1,11 @@
+"use client"
+
 import Image from "next/image";
 import { useState } from "react";
 import ProductPreviewModal from "@/components/modals/ProductPreviewModal";
 // import { useCart } from "@/app/context/CartContext";
 import Link from "next/link";
-import { link } from "fs";
-import { Product } from "@/types/product.types";
+import { Product } from "@/types/product/product.types";
 
 const styles = {
   actionHidden: "opacity-0 transition-opacity duration-500",
