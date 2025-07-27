@@ -55,9 +55,9 @@ const Navbar: React.FC = () => {
           ))}
           <NavbarSearch/>
           <NavbarCart />
-          <button className="cursor-pointer px-8 py-2 bg-indigo-500 hover:bg-indigo-600 transition text-white rounded-full">
-            Login
-          </button>
+          <Link href={"/auth/login"} className="cursor-pointer px-8 py-2 bg-indigo-500 hover:bg-indigo-600 transition text-white rounded-full">
+            Sign In
+          </Link>
         </div>
 
         <div className="lg:hidden flex gap-5">
@@ -157,9 +157,9 @@ const Navbar: React.FC = () => {
             </div>
           ))}
           <div className="mt-2 mb-2 ml-4 mr-4">
-            <button className="cursor-pointer px-6 py-2 mt-2 bg-indigo-500 hover:bg-indigo-600 transition text-white rounded-full text-sm">
-              Login
-            </button>
+            <Link href={"/auth/login"} className="cursor-pointer px-6 py-2 mt-2 bg-indigo-500 hover:bg-indigo-600 transition text-white rounded-full text-sm">
+              Sign In
+            </Link>
           </div>
         </div>
       </nav>

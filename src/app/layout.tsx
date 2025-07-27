@@ -5,6 +5,7 @@ import { Inter } from "next/font/google";
 import ScrollToTop from "../components/ScrollToTop";
 import { CartProvider } from "./context/CartContext";
 import Navbar from "../components/Navbar/index"
+import { Toaster } from 'react-hot-toast';
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -22,6 +23,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={inter.className}>
         <CartProvider>
+          <Toaster position="bottom-right" />
           <Navbar />
           <ScrollToTop />
           <main className="min-h-screen bg-gradient-to-b from-black to-[#1A0033]">{children}</main>

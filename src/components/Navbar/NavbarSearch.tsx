@@ -115,7 +115,10 @@ const NavbarSearch: React.FC = () => {
         value={searchTerm}
         onChange={(e) => handleSearchChange(e.target.value)}
         onFocus={() => setIsSearchOpen(true)}
-        onKeyDown={handleKeyDown}
+        onKeyDown={(e) => {
+          handleKeyDown(e);
+          setIsSearchOpen(false);
+        }}
       />
 
       <button
