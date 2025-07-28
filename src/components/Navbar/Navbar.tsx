@@ -6,6 +6,8 @@ import Link from "next/link";
 import NavbarItem from "./NavbarItem";
 import NavbarCart from "./NavbarCart";
 import NavbarSearch from "./NavbarSearch";
+import NavbarAccount from "./NavbarAccount";
+import { useUser } from "@/contexts/UserContext";
 
 const NAV_ITEMS = [
   { label: "Home", href: "/" },
@@ -20,6 +22,7 @@ const NAV_ITEMS = [
 const Navbar: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const { user, setUser } = useUser();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -37,6 +40,15 @@ const Navbar: React.FC = () => {
     };
   }, []);
 
+  const handleLogout = async () => {
+    await fetch("http://localhost:3001/auth/logout", {
+      method: "POST",
+      credentials: "include",
+    });
+
+    setUser(null);
+  };
+
   return (
     <header
       className={`sticky top-0 z-50 w-full transition-colors duration-300 ${
@@ -53,11 +65,19 @@ const Navbar: React.FC = () => {
           {NAV_ITEMS.map((item) => (
             <NavbarItem key={item.label} label={item.label} href={item.href} />
           ))}
-          <NavbarSearch/>
+          <NavbarSearch />
           <NavbarCart />
-          <Link href={"/auth/login"} className="cursor-pointer px-8 py-2 bg-indigo-500 hover:bg-indigo-600 transition text-white rounded-full">
-            Sign In
-          </Link>
+
+          {user ? (
+            <NavbarAccount user={user} onLogout={handleLogout} />
+          ) : (
+            <Link
+              href={"/auth/login"}
+              className="cursor-pointer px-8 py-2 bg-indigo-500 hover:bg-indigo-600 transition text-white rounded-full"
+            >
+              Sign In
+            </Link>
+          )}
         </div>
 
         <div className="lg:hidden flex gap-5">
@@ -157,7 +177,10 @@ const Navbar: React.FC = () => {
             </div>
           ))}
           <div className="mt-2 mb-2 ml-4 mr-4">
-            <Link href={"/auth/login"} className="cursor-pointer px-6 py-2 mt-2 bg-indigo-500 hover:bg-indigo-600 transition text-white rounded-full text-sm">
+            <Link
+              href={"/auth/login"}
+              className="cursor-pointer px-6 py-2 mt-2 bg-indigo-500 hover:bg-indigo-600 transition text-white rounded-full text-sm"
+            >
               Sign In
             </Link>
           </div>

@@ -3,8 +3,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { apiClient } from "@/lib/apiClient";
 import toast from "react-hot-toast";
+import { useUser } from "@/contexts/UserContext";
 // import { login } from "@/services/auth.service";
 
 export default function LoginPage(): React.ReactElement {
@@ -13,11 +13,14 @@ export default function LoginPage(): React.ReactElement {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
+  const { setUser } = useUser();
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       const res = await fetch("http://localhost:3001/auth/login", {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ identifier, password }),
       });
@@ -29,6 +32,17 @@ export default function LoginPage(): React.ReactElement {
       }
 
       toast.success("Login Success");
+
+      // ✅ อัปเดตข้อมูล user จาก /auth/me แทนการใช้ localStorage
+      const profileRes = await fetch("http://localhost:3001/auth/getProfile", {
+        credentials: "include",
+      });
+
+      if (profileRes.ok) {
+        const profile = await profileRes.json();
+        setUser(profile.user);
+      }
+
       router.push("/");
     } catch (error) {
       toast.error("Login Failed");
