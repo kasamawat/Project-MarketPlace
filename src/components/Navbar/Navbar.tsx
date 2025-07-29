@@ -1,13 +1,13 @@
 // components/Navbar/Navbar.tsx
 "use client";
 
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import NavbarItem from "./NavbarItem";
 import NavbarCart from "./NavbarCart";
 import NavbarSearch from "./NavbarSearch";
 import NavbarAccount from "./NavbarAccount";
-import { useUser } from "@/contexts/UserContext";
+import { JwtPayload } from "@/models/JwtPayload";
 
 const NAV_ITEMS = [
   { label: "Home", href: "/" },
@@ -19,10 +19,10 @@ const NAV_ITEMS = [
   { label: "Contact", href: "/contact" },
 ];
 
-const Navbar: React.FC = () => {
+export default function NavbarClient({ user }: { user: JwtPayload | null }) {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const { user, setUser } = useUser();
+  // const { user, setUser } = useUser();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -41,24 +41,38 @@ const Navbar: React.FC = () => {
   }, []);
 
   const handleLogout = async () => {
-    await fetch("http://localhost:3001/auth/logout", {
+    await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/logout`, {
       method: "POST",
       credentials: "include",
     });
 
-    setUser(null);
+    window.location.reload();
+    // setUser(null);
   };
 
   return (
     <header
       className={`sticky top-0 z-50 w-full transition-colors duration-300 ${
-        scrolled ? "bg-gray-900/90 shadow-md" : "bg-transparent"
+        scrolled ? "bg-gray-800 shadow-md" : "bg-transparent"
       }`}
     >
       <nav className="flex items-center justify-between p-4 md:px-16 lg:px-24 xl:px-32 md:py-6 w-full z-20 relative">
-        <Link href="/" className="font-bold text-xl">
-          🛒 MyShop
-        </Link>
+        <div className="hidden lg:flex items-center gap-8">
+          <Link href="/" className="font-bold text-4xl">
+            🛒 MyShop
+          </Link>
+
+          {user ? (
+            <Link
+              href={user?.storeId ? "/store/dashboard" : "/store/register"}
+              className="px-2 py-1 bg-indigo-500 text-sm text-white rounded hover:bg-indigo-600"
+            >
+              Start Selling
+            </Link>
+          ) : (
+            <></>
+          )}
+        </div>
 
         {/* Desktop Menu */}
         <div className="hidden lg:flex items-center gap-8">
@@ -188,6 +202,4 @@ const Navbar: React.FC = () => {
       </nav>
     </header>
   );
-};
-
-export default Navbar;
+}

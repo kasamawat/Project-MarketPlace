@@ -8,6 +8,10 @@ export interface IUser extends Document {
     password: string;
     role: "customer" | "seller" | "admin";
     createdAt: Date;
+    firstname: string;
+    lastname: string;
+    gender: string;
+    dob: Date
 }
 
 const UserSchema = new Schema<IUser>(
@@ -16,10 +20,12 @@ const UserSchema = new Schema<IUser>(
         email: { type: String, required: true, unique: true },
         password: { type: String, required: true },
         role: {
-          type: String,
-          enum: ["customer", "seller", "admin"],
-          default: "customer",
+            type: String,
+            enum: ["customer", "seller", "admin"],
+            default: "customer",
         },
+        firstname: { type: String },
+        lastname: { type: String },
     },
     { timestamps: true }
 );

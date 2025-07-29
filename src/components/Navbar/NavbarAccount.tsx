@@ -1,20 +1,20 @@
 // components/NavbarAccount.tsx
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-
-type User = {
-  username: string;
-};
+import { usePathname, useRouter } from "next/navigation";
+import { JwtPayload } from "@/models/JwtPayload";
 
 type Props = {
-  user: User;
+  user: JwtPayload;
   onLogout: () => void;
 };
 
 const NavbarAccount: React.FC<Props> = ({ user, onLogout }) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const router = useRouter();
+  const pathname = usePathname();
+
+  const dropdownAccountRef = useRef<HTMLDivElement>(null);
 
   const toggleDropdown = () => {
     setDropdownOpen((prev) => !prev);
@@ -25,13 +25,34 @@ const NavbarAccount: React.FC<Props> = ({ user, onLogout }) => {
     router.push("/auth/login");
   };
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (
+        dropdownAccountRef.current &&
+        !dropdownAccountRef.current.contains(target)
+      ) {
+        setDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  useEffect(() => {
+    setDropdownOpen(false);
+  }, [pathname]);
+
   return (
-    <div className="relative inline-block text-left">
+    <div ref={dropdownAccountRef} className="relative inline-block text-left">
       <button
         onClick={toggleDropdown}
-        className="cursor-pointer px-8 py-2 bg-gray-500 hover:bg-gray-600 transition text-white rounded-full flex"
+        className="cursor-pointer px-5 py-2 bg-gray-500 hover:bg-gray-600 transition text-white rounded-full flex"
       >
-        <p className="mr-1">{user ? user.username : "Account"}</p>
+        <p className="mr-2">{user ? user.username : "Account"}</p>
         <svg
           xmlns="http://www.w3.org/2000/svg"
           width="24"
@@ -52,8 +73,8 @@ const NavbarAccount: React.FC<Props> = ({ user, onLogout }) => {
       </button>
 
       {dropdownOpen && (
-        <div className="absolute right-0 mt-2 w-48 bg-gray-900 rounded shadow-md z-10">
-          <Link href="/account" className="block px-4 py-2 hover:bg-gray-800">
+        <div className="absolute right-0 mt-7 w-48 bg-gray-900 shadow-lg rounded-lg p-4 z-50">
+          <Link href="/user" className="block px-4 py-2 hover:bg-gray-800">
             Account
           </Link>
           <Link href="/orders" className="block px-4 py-2 hover:bg-gray-800">

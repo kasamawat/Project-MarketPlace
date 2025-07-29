@@ -4,8 +4,6 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import toast from "react-hot-toast";
-import { useUser } from "@/contexts/UserContext";
-// import { login } from "@/services/auth.service";
 
 export default function LoginPage(): React.ReactElement {
   const router = useRouter();
@@ -13,12 +11,10 @@ export default function LoginPage(): React.ReactElement {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
-  const { setUser } = useUser();
-
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await fetch("http://localhost:3001/auth/login", {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -33,16 +29,7 @@ export default function LoginPage(): React.ReactElement {
 
       toast.success("Login Success");
 
-      // ✅ อัปเดตข้อมูล user จาก /auth/me แทนการใช้ localStorage
-      const profileRes = await fetch("http://localhost:3001/auth/getProfile", {
-        credentials: "include",
-      });
-
-      if (profileRes.ok) {
-        const profile = await profileRes.json();
-        setUser(profile.user);
-      }
-
+      window.location.reload();
       router.push("/");
     } catch (error) {
       toast.error("Login Failed");
@@ -55,7 +42,7 @@ export default function LoginPage(): React.ReactElement {
         className="md:w-96 w-80 flex flex-col items-center justify-center"
         onSubmit={handleLogin}
       >
-        <h2 className="text-5xl text-gray-900 font-medium my-6">Sign in</h2>
+        <h2 className="text-5xl text-gray-600 font-medium my-6">Sign in</h2>
 
         <div className="flex items-center w-full bg-transparent border border-gray-300/60 h-12 rounded-full overflow-hidden pl-6 gap-2">
           <svg
@@ -64,18 +51,18 @@ export default function LoginPage(): React.ReactElement {
             height="24"
             viewBox="0 0 24 24"
             fill="#6B7280"
-            className="icon icon-tabler icons-tabler-filled icon-tabler-user"
+            className="icon icon-tabler icons-tabler-filled icon-tabler-mail"
           >
             <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-            <path d="M12 2a5 5 0 1 1 -5 5l.005 -.217a5 5 0 0 1 4.995 -4.783z" />
-            <path d="M14 14a5 5 0 0 1 5 5v1a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-1a5 5 0 0 1 5 -5h4z" />
+            <path d="M22 7.535v9.465a3 3 0 0 1 -2.824 2.995l-.176 .005h-14a3 3 0 0 1 -2.995 -2.824l-.005 -.176v-9.465l9.445 6.297l.116 .066a1 1 0 0 0 .878 0l.116 -.066l9.445 -6.297z" />
+            <path d="M19 4c1.08 0 2.027 .57 2.555 1.427l-9.555 6.37l-9.555 -6.37a2.999 2.999 0 0 1 2.354 -1.42l.201 -.007h14z" />
           </svg>
 
           <input
             type="text"
             value={identifier}
             onChange={(e) => setIdentifier(e.target.value)}
-            placeholder="Username or Email"
+            placeholder="Email or Phone"
             className="bg-transparent text-gray-500/80 placeholder-gray-500/80 outline-none text-sm w-full h-full"
             required
           />

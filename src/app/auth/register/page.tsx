@@ -4,22 +4,33 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import toast from "react-hot-toast";
+import Link from "next/link";
 // import { register } from "@/services/auth.service";
 
 export default function RegisterPage(): React.ReactElement {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [retypePassword, setRetypePassword] = useState("");
   const [username, setUsername] = useState("");
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (password !== retypePassword) {
+      toast.error("Passwords do not match");
+      return;
+    }
+
     try {
-      const res = await fetch("http://localhost:3001/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, email, password }),
-      });
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/auth/register`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username, email, password }),
+        }
+      );
 
       if (!res.ok) {
         const data = await res.json();
@@ -41,7 +52,7 @@ export default function RegisterPage(): React.ReactElement {
         className="md:w-96 w-80 flex flex-col items-center justify-center"
         onSubmit={handleRegister}
       >
-        <h2 className="text-5xl text-gray-900 font-medium my-6">Sign up</h2>
+        <h2 className="text-5xl text-gray-600 font-medium my-6">Sign up</h2>
 
         <div className="flex items-center w-full bg-transparent border border-gray-300/60 h-12 rounded-full overflow-hidden pl-6 gap-2">
           <svg
@@ -112,7 +123,29 @@ export default function RegisterPage(): React.ReactElement {
             className="bg-transparent text-gray-500/80 placeholder-gray-500/80 outline-none text-sm w-full h-full"
             required
           />
+        </div>
 
+        <div className="flex items-center mt-6 w-full bg-transparent border border-gray-300/60 h-12 rounded-full overflow-hidden pl-6 gap-2">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="#6B7280"
+            className="icon icon-tabler icons-tabler-filled icon-tabler-lock"
+          >
+            <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+            <path d="M12 2a5 5 0 0 1 5 5v3a3 3 0 0 1 3 3v6a3 3 0 0 1 -3 3h-10a3 3 0 0 1 -3 -3v-6a3 3 0 0 1 3 -3v-3a5 5 0 0 1 5 -5m0 12a2 2 0 0 0 -1.995 1.85l-.005 .15a2 2 0 1 0 2 -2m0 -10a3 3 0 0 0 -3 3v3h6v-3a3 3 0 0 0 -3 -3" />
+          </svg>
+
+          <input
+            type="password"
+            value={retypePassword}
+            onChange={(e) => setRetypePassword(e.target.value)}
+            placeholder="Retype Password"
+            className="bg-transparent text-gray-500/80 placeholder-gray-500/80 outline-none text-sm w-full h-full"
+            required
+          />
         </div>
 
         <button
@@ -146,6 +179,16 @@ export default function RegisterPage(): React.ReactElement {
             height={100}
           />
         </button>
+
+        <p className="text-gray-500/90 text-sm mt-4">
+          Do have account{" "}
+          <Link
+            href={"/auth/login"}
+            className="text-indigo-400 hover:underline"
+          >
+            Sign In
+          </Link>
+        </p>
       </form>
     </div>
   );
