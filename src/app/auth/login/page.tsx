@@ -13,26 +13,37 @@ export default function LoginPage(): React.ReactElement {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    // setIsLoading(true);
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, {
         method: "POST",
-        credentials: "include",
+        credentials: "include", // สำคัญสำหรับ cookie auth
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ identifier, password }),
       });
 
+      const data = await res.json();
+
       if (!res.ok) {
-        const data = await res.json();
-        toast.error(data.message);
+        toast.error(data.message || "Login Failed");
+        // setIsLoading(false);
         return;
       }
 
       toast.success("Login Success");
 
+      // Option 1: reload ทั้งหน้า (ถ้า auth state ถูกเซ็ตจาก cookie ฝั่ง server)
       window.location.reload();
-      router.push("/");
+
+      // Option 2: redirect หน้าแบบ smooth (ถ้าใช้ next/navigation)
+      // router.push("/"); // หรือจะ redirect ไป dashboard ก็ได้
+
+      // Optionally: set user context (ถ้ามีระบบ context)
+      // setUser(data.user) หรือเรียก /me อีกที
     } catch (error) {
-      toast.error("Login Failed");
+      toast.error("Login Failed. Please try again.");
+    } finally {
+      // setIsLoading(false);
     }
   };
 

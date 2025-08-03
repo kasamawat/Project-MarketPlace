@@ -9,9 +9,11 @@ type Props = {
   onLogout: () => void;
 };
 
-const NavbarAccount: React.FC<Props> = ({ user, onLogout }) => {
+export default function NavbarAccount({
+  user,
+  onLogout,
+}: Props): React.ReactElement {
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const router = useRouter();
   const pathname = usePathname();
 
   const dropdownAccountRef = useRef<HTMLDivElement>(null);
@@ -22,7 +24,6 @@ const NavbarAccount: React.FC<Props> = ({ user, onLogout }) => {
 
   const handleLogout = () => {
     onLogout(); // clear token or user state
-    router.push("/auth/login");
   };
 
   useEffect(() => {
@@ -80,6 +81,19 @@ const NavbarAccount: React.FC<Props> = ({ user, onLogout }) => {
           <Link href="/orders" className="block px-4 py-2 hover:bg-gray-800">
             My Orders
           </Link>
+
+          {user.storeId && (
+            <div>
+              <div className="border-t border-gray-700 my-2" />
+              <Link
+                href="/store/dashboard"
+                className="block px-4 py-2 hover:bg-gray-800"
+              >
+                My Store
+              </Link>
+            </div>
+          )}
+          <div className="border-t border-gray-700 my-2" />
           <button
             onClick={handleLogout}
             className="w-full text-left px-4 py-2 hover:bg-gray-800 text-red-600 cursor-pointer"
@@ -90,6 +104,4 @@ const NavbarAccount: React.FC<Props> = ({ user, onLogout }) => {
       )}
     </div>
   );
-};
-
-export default NavbarAccount;
+}

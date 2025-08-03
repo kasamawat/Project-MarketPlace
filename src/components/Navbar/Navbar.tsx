@@ -8,6 +8,8 @@ import NavbarCart from "./NavbarCart";
 import NavbarSearch from "./NavbarSearch";
 import NavbarAccount from "./NavbarAccount";
 import { JwtPayload } from "@/models/JwtPayload";
+import { useRouter } from "next/navigation";
+import { useUser } from "@/contexts/UserContext";
 
 const NAV_ITEMS = [
   { label: "Home", href: "/" },
@@ -19,10 +21,15 @@ const NAV_ITEMS = [
   { label: "Contact", href: "/contact" },
 ];
 
-export default function NavbarClient({ user }: { user: JwtPayload | null }) {
+export default function NavbarClient({
+  user,
+}: {
+  user: JwtPayload | null;
+}): React.ReactElement {
+  const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  // const { user, setUser } = useUser();
+  const { setUser } = useUser();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -46,6 +53,8 @@ export default function NavbarClient({ user }: { user: JwtPayload | null }) {
       credentials: "include",
     });
 
+    setUser(null);
+    // router.push("/auth/login");
     window.location.reload();
     // setUser(null);
   };
@@ -62,16 +71,12 @@ export default function NavbarClient({ user }: { user: JwtPayload | null }) {
             🛒 MyShop
           </Link>
 
-          {user ? (
-            <Link
-              href={user?.storeId ? "/store/dashboard" : "/store/register"}
-              className="px-2 py-1 bg-indigo-500 text-sm text-white rounded hover:bg-indigo-600"
-            >
-              Start Selling
-            </Link>
-          ) : (
-            <></>
-          )}
+          <Link
+            href="/store/dashboard"
+            className="px-2 py-1 bg-indigo-500 text-sm text-white rounded hover:bg-indigo-600"
+          >
+            Start Selling
+          </Link>
         </div>
 
         {/* Desktop Menu */}

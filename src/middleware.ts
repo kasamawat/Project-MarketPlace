@@ -1,33 +1,81 @@
 // middleware.ts
 import { NextRequest, NextResponse } from "next/server";
+import { parseJwt } from "./lib/parseJwt";
+import { JwtPayload } from "./models/JwtPayload";
 
 export function middleware(req: NextRequest) {
-    const token = req.cookies.get("token")?.value;
+  const token = req.cookies.get("token")?.value;
+  const { pathname } = req.nextUrl;
 
-    const isLoginPage = req.nextUrl.pathname.startsWith("/auth/login");
-    const isRegisterPage = req.nextUrl.pathname.startsWith("/auth/register");
+  const isLoginPage = pathname.startsWith("/auth/login");
+  const isRegisterPage = pathname.startsWith("/auth/register");
+  const isStoreRegisterPage = pathname.startsWith("/store/register");
 
-    // ถ้ามี token และอยู่หน้า login/register → redirect ไปหน้า home
-    if (token && (isLoginPage || isRegisterPage)) {
-        return NextResponse.redirect(new URL("/", req.url));
-    }
+  // =========================================== Client ===========================================
+  // 1. ถ้ามี token แล้ว user เข้า /auth/login หรือ /auth/register → redirect home
+  if (token && (isLoginPage || isRegisterPage)) {
+    return NextResponse.redirect(new URL("/", req.url));
+  }
 
-    const protectedPaths = ["/store/register", "/stores"];
-    const isProtectedPath = protectedPaths.some(path => req.nextUrl.pathname.startsWith(path));
+  // 2. ถ้าไม่มี token แล้วเข้า /store/xxx → redirect ไป login
+  // (ยกเว้น /store/public หรือ path ที่อนุญาต)
+  const isStorePath = pathname.startsWith("/store/");
+  if (!token && isStorePath) {
+    return NextResponse.redirect(new URL("/auth/login", req.url));
+  }
 
-    if (!token && isProtectedPath) {
-        return NextResponse.redirect(new URL("/auth/login", req.url));
-    }
+  // ==============================================================================================
 
-    return NextResponse.next();
+  // =========================================== Store ===========================================
+  const requireStorePaths = [
+    "/store/dashboard",
+    "/store/products",
+    "/store/settings",
+    "/store/status",
+    // เพิ่ม path อื่นได้ตามต้องการ
+  ];
+
+  // decode JWT เพื่อตรวจสอบ storeId
+  let storeId: string | null = null;
+  if (token) {
+    const payload = parseJwt(token) as JwtPayload;
+    storeId = payload?.storeId ?? null;
+  }
+
+  // ถ้ายังไม่มี token → redirect login
+  if (!token && pathname.startsWith("/store/")) {
+    return NextResponse.redirect(new URL("/auth/login", req.url));
+  }
+
+  // === [1] ถ้า user ยังไม่มีร้าน แต่เข้าหน้าต้องมีร้านค้า ===
+  if (
+    token &&
+    !storeId &&
+    requireStorePaths.some((prefix) => pathname.startsWith(prefix))
+  ) {
+    return NextResponse.redirect(new URL("/store/register", req.url));
+  }
+
+  // === [2] ถ้า user มีร้านค้าแล้ว แต่ดันเข้า /store/register ซ้ำ ===
+  if (
+    token &&
+    storeId &&
+    pathname.startsWith("/store/register")
+  ) {
+    return NextResponse.redirect(new URL("/store/dashboard", req.url));
+  }
+
+  // ==============================================================================================
+
+  // 3. อื่น ๆ ปล่อยผ่าน
+  return NextResponse.next();
 }
 
 // กำหนดเส้นทางที่ middleware ทำงาน
 export const config = {
-    matcher: [
-        "/auth/login",
-        "/auth/register",
-        "/store/register",
-        "/stores/:path*/dashboard", // path ป้องกันเฉพาะ dashboard
-    ],
+  matcher: [
+    "/auth/login",
+    "/auth/register",
+    "/store/:path*",   // ป้องกันทุกหน้าภายใต้ /store/
+  ],
 };

@@ -1,12 +1,17 @@
+// src/types/product-base.types.ts
 import { ProductCategory } from "../enums/product-category.enum";
 import { ProductType } from "../enums/product-type.enum";
 import { Store } from "@/types/store.types";
 
 export interface ProductVariant {
+  id:  string; // UUID
   name: string; // เช่น "Color"
-  value: string; // เช่น "Black"
-  priceModifier?: number; // เพิ่มราคาถ้ามี เช่น +2000
-  stock?: number; // จำนวนสินค้าที่เหลือในตัวเลือกนั้น
+  value?: string; // เช่น "Black"
+  image?: string;
+  price?: number; // เช่น +200
+  stock?: number; // เช่น 10 ชิ้น
+  variants?: ProductVariant[];
+  status?: "normal" | "editing" | "new";
 }
 
 export interface ProductAttribute {
@@ -19,9 +24,16 @@ export interface ProductBase {
   storeId?: string | number;
   name: string;
   description: string;
-  image: string;
-  price: number;
+  image?: string;
+  price?: number;
   category: ProductCategory;
   type: ProductType;
-  store: Store;
+  store?: Store;
+  
+  // เพิ่มเพื่อใช้ในหน้าจอเพิ่ม/แสดงสินค้า
+  stock?: number;
+  variants?: ProductVariant[];
+  attributes?: ProductAttribute[];
+  createdAt?: Date | string;
+  updatedAt?: Date | string;
 }

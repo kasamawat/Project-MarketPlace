@@ -8,4 +8,5 @@ export enum ProductCategory {
     Laptop = "Laptop",
     TShirt = "T-Shirt",
     Jacket = "Jacket",
+    Accessory = "Accessory"
 }

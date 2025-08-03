@@ -22,13 +22,13 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     const fetchUser = async () => {
       try {
         const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/getProfile`, {
+          method: "GET",
           credentials: "include",
         });
 
         if (res.ok) {
           const data = await res.json();
-          console.log(data,"data");
-          
+
           setUser(data.user);
         }
       } catch (err) {

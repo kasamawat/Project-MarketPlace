@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
 
 export default function StoreRegisterForm() {
   const router = useRouter();
@@ -35,7 +36,10 @@ export default function StoreRegisterForm() {
 
     if (res.ok) {
       const data = await res.json();
-    //   router.push(`/stores/${data.storeId}/dashboard`);
+      
+      toast.success("Register Store Success");
+
+      router.push(`/store/dashboard`);
     } else {
       alert("Failed to register store");
     }
@@ -119,7 +123,7 @@ export default function StoreRegisterForm() {
         />
         <button
           type="submit"
-          className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
+          className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 cursor-pointer"
         >
           Create Store
         </button>
