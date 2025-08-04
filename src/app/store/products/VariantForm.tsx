@@ -1,14 +1,12 @@
 // VariantModal.tsx
 "use client";
 import { useEffect, useState } from "react";
-import Modal from "@/components/Modal"; // ใช้ Modal เดิมของคุณ
-import { ProductVariant } from "@/types/product/base/product-base.types";
-import { v4 as uuidv4 } from "uuid";
+import { ProductVariantBase } from "@/types/product/base/product-base.types";
 import toast from "react-hot-toast";
 
 interface Props {
-  variant: ProductVariant;
-  onSuccess?: (id: string, variant: ProductVariant) => void;
+  variant: ProductVariantBase;
+  onSuccess?: (id: string, variant: ProductVariantBase) => void;
   onCancel?: () => void;
   productId?: string;
 }
@@ -21,9 +19,9 @@ export default function VariantModal({
 }: Props) {
   console.log(variant, "variant");
 
-  const [form, setForm] = useState<ProductVariant>(
+  const [form, setForm] = useState<ProductVariantBase>(
     variant || {
-      id: "",
+      // _id: "",
       name: "",
       value: "",
       image: "",
@@ -45,7 +43,9 @@ export default function VariantModal({
   useEffect(() => {
     if (variant) {
       setForm(variant);
-      setHasVariant(variant.variants !== undefined);
+      setHasVariant(
+        Array.isArray(variant.variants) && variant.variants.length > 0
+      );
       setSubVariantValues(
         Array.isArray(variant?.variants)
           ? variant.variants
@@ -92,6 +92,11 @@ export default function VariantModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (hasVariant && subVariantValues.length === 0) {
+      toast.error("กรุณาเพิ่มอย่างน้อย 1 ตัวเลือก Sub Variant");
+      return;
+    }
+
     const variantData = { ...form };
 
     if (hasVariant) {
@@ -99,13 +104,16 @@ export default function VariantModal({
       variantData.variants = subVariantValues
         .filter((v) => v.trim() !== "")
         .map((v) => ({
-          id: uuidv4(),
+          // _id: "",
           name: subVariantGroup, // group เดียวกัน เช่น "สี" หรือ "ขนาด"
           value: v, // value จาก input
+          image: "",
           price: 0,
           stock: 0,
+          variants: [],
         }));
 
+      delete variantData.image;
       delete variantData.price;
       delete variantData.stock;
     } else {
@@ -113,11 +121,28 @@ export default function VariantModal({
       delete variantData.variants;
     }
 
-    console.log(productId, "productId");
-    console.log(variantData, "variantData");
+    let responseProductVariant: ProductVariantBase | null = null;
+
+    const res = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/products/${productId}/variant`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ variant: variantData }),
+        credentials: "include",
+      }
+    );
+
+    if (!res.ok) {
+      // handle error
+      toast.error("Add failed");
+      return;
+    }
+
+    responseProductVariant = await res.json();
 
     if (!productId) return;
-    onSuccess?.(hasVariant ? productId : productId, variantData);
+    onSuccess?.(productId, responseProductVariant!);
   };
 
   // Modal เปิดปิดคุมจาก parent

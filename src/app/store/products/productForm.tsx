@@ -3,8 +3,6 @@ import { useState, useEffect } from "react";
 import { ProductBase } from "@/types/product/base/product-base.types";
 import { ProductCategory } from "@/types/product/enums/product-category.enum";
 import { ProductType } from "@/types/product/enums/product-type.enum";
-import { useRouter } from "next/navigation";
-import { v4 as uuidv4 } from "uuid";
 import toast from "react-hot-toast";
 
 type ProductFormProps = {
@@ -22,16 +20,15 @@ export default function ProductForm({
 }: ProductFormProps) {
   console.log(product, "product");
 
-  const router = useRouter();
   const [form, setForm] = useState<ProductBase>(
     product || {
-      id: uuidv4(),
+      _id: "",
       name: "",
       description: "",
-      image: "",
-      price: 0,
       category: ProductCategory.allCategory,
       type: ProductType.allType,
+      image: "",
+      price: 0,
       stock: 0,
       variants: [],
     }
@@ -49,7 +46,9 @@ export default function ProductForm({
   useEffect(() => {
     if (product) {
       setForm(product);
-      setHasVariant(product.variants !== undefined);
+      setHasVariant(
+        Array.isArray(product.variants) && product.variants.length > 0
+      );
       setVariantValues(
         Array.isArray(product?.variants)
           ? product.variants
@@ -101,6 +100,11 @@ export default function ProductForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (hasVariant && variantValues.length === 0) {
+      toast.error("กรุณาเพิ่มอย่างน้อย 1 ตัวเลือก Variant");
+      return;
+    }
+
     const productData = { ...form }; // copy state
 
     if (hasVariant) {
@@ -111,12 +115,13 @@ export default function ProductForm({
         ...variantValues
           .filter((v) => v.trim() !== "") // เผื่อผู้ใช้ใส่ช่องว่าง
           .map((v) => ({
-            id: uuidv4(),
+            // _id: "",
             name: variantGroup, // group เดียวกัน เช่น "สี" หรือ "ขนาด"
             value: v, // value จาก input
+            image: "",
             price: 0,
             stock: 0,
-            // variants: [],
+            variants: [],
           })),
       ];
       // ลบ/รีเซ็ต field เดี่ยวถ้ามี
@@ -129,23 +134,40 @@ export default function ProductForm({
       delete productData.variants;
     }
 
-    // TODO: call API (POST/PUT) ตาม mode
-    // if (mode === "edit") {
-    //   await fetch(`${process.env.NEXT_PUBLIC_API_URL}/products/${form.id}`, {
-    //     method: "PUT",
-    //     body: JSON.stringify(productData),
-    //     headers: { "Content-Type": "application/json" },
-    //     credentials: "include",
-    //   });
-    // } else {
-    //   await fetch(`${process.env.NEXT_PUBLIC_API_URL}/products`, {
-    //     method: "POST",
-    //     body: JSON.stringify(productData),
-    //     headers: { "Content-Type": "application/json" },
-    //     credentials: "include",
-    //   });
-    // }
-    onSuccess?.(productData);
+    let responseProduct: ProductBase | null = null;
+
+    if (mode === "edit") {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/products/${form._id}`,
+        {
+          method: "PUT",
+          body: JSON.stringify(productData),
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+        }
+      );
+      if (!res.ok) {
+        // handle error
+        toast.error("Update failed");
+        return;
+      }
+      responseProduct = await res.json();
+    } else {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/products`, {
+        method: "POST",
+        body: JSON.stringify(productData),
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+      });
+      if (!res.ok) {
+        // handle error
+        toast.error("Add failed");
+        return;
+      }
+      responseProduct = await res.json();
+    }
+
+    onSuccess?.(responseProduct!);
   };
 
   const categories = Object.values(ProductCategory).filter(

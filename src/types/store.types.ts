@@ -1,7 +1,7 @@
 export type StoreStatus = "pending" | "approved" | "rejected";
 
 export type Store = {
-    id: string; // หรือใช้ `_id: string;` แล้วแต่ฝั่ง backend ใช้แบบไหน (ถ้าใช้ MongoDB ก็จะเป็น `_id`)
+    _id: string; // หรือใช้ `_id: string;` แล้วแต่ฝั่ง backend ใช้แบบไหน (ถ้าใช้ MongoDB ก็จะเป็น `_id`)
     name: string;
     slug: string;
     description?: string;

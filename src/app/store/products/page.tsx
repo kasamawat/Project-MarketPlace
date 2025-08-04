@@ -1,19 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import Modal from "@/components/Modal";
 import ProductForm from "./productForm";
 import {
   ProductBase,
-  ProductVariant,
+  ProductVariantBase,
 } from "@/types/product/base/product-base.types";
 // import { ProductCategory } from "@/types/product/enums/product-category.enum";
 // import { ProductType } from "@/types/product/enums/product-type.enum";
 import React from "react";
 import VariantForm from "./VariantForm";
 import VariantTable from "./VariantTable";
+import ConfirmModal from "@/components/ConfirmModal";
+import toast from "react-hot-toast";
 
 type ModalProductState =
   | { type: "none" }
@@ -21,69 +23,33 @@ type ModalProductState =
   | { type: "edit"; product: ProductBase };
 type ModalVariantState =
   | { type: "none" }
-  | { type: "set"; id: string | number; variant: ProductVariant };
+  | { type: "set"; id: string | number; variant: ProductVariantBase };
 
 export default function ProductList(): React.ReactElement {
-  const [products, setProducts] = useState<ProductBase[]>([
-    // {
-    //   id: "P1",
-    //   storeId: "store123",
-    //   name: "Test Product",
-    //   description: "A sample product for testing",
-    //   image: "/no-image.png",
-    //   price: 299,
-    //   stock: 10,
-    //   category: ProductCategory.Accessory,
-    //   type: ProductType.Physical,
-    //   store: {
-    //     id: "store123",
-    //     name: "My Store",
-    //     slug: "my-store",
-    //     description: "A great store",
-    //     phone: "0123456789",
-    //     productCategory: "Accessory",
-    //     returnPolicy: "No return",
-    //     bankName: "",
-    //     bankAccountNumber: "",
-    //     bankAccountName: "",
-    //     status: "approved",
-    //     ownerId: "1",
-    //     createdAt: new Date(),
-    //   },
-    // },
-    // {
-    //   id: "P2",
-    //   storeId: "store123",
-    //   name: "กระเป๋าวิเศษ",
-    //   description: "ของ โดราเอม่อน",
-    //   category: ProductCategory.Accessory,
-    //   type: ProductType.Physical,
-    //   store: {
-    //     id: "store123",
-    //     name: "My Store",
-    //     slug: "my-store",
-    //     description: "A great store",
-    //     phone: "0123456789",
-    //     productCategory: "Accessory",
-    //     returnPolicy: "No return",
-    //     bankName: "",
-    //     bankAccountNumber: "",
-    //     bankAccountName: "",
-    //     status: "approved",
-    //     ownerId: "1",
-    //     createdAt: new Date(),
-    //   },
-    //   variants: [
-    //     {
-    //       id: "V1",
-    //       name: "Color", // ใส่ชื่อ group (เช่น "สี" หรือ "ขนาด")
-    //       value: "Red",
-    //       price: 0,
-    //       stock: 0,
-    //     },
-    //   ],
-    // },
-  ]);
+  const [products, setProducts] = useState<ProductBase[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      setLoading(true);
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/products`, {
+        method: "GET",
+        credentials: "include", // <<--- ส่ง cookie token ด้วย
+      });
+      if (res.ok) {
+        const data: ProductBase[] = await res.json();
+        setProducts(data); // <<--- เซ็ตข้อมูลที่ได้
+      } else {
+        // handle error ตามต้องการ
+        setProducts([]);
+      }
+      setLoading(false);
+    };
+
+    fetchProducts();
+  }, []);
+
   const [modalProduct, setModalProduct] = useState<ModalProductState>({
     type: "none",
   });
@@ -118,17 +84,17 @@ export default function ProductList(): React.ReactElement {
   const handleEditSuccess = (updated: ProductBase) => {
     console.log(updated, "updated");
 
-    setProducts((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+    setProducts((prev) => prev.map((p) => (p._id === updated._id ? updated : p)));
     setModalProduct({ type: "none" });
   };
   // =============================================================
 
-  function updateVariantTree(
-    variants: ProductVariant[] = [],
-    variantToUpdate: ProductVariant
-  ): ProductVariant[] {
+  const updateVariantTree = (
+    variants: ProductVariantBase[] = [],
+    variantToUpdate: ProductVariantBase
+  ): ProductVariantBase[] => {
     return variants.map((v) => {
-      if (v.id === variantToUpdate.id) {
+      if (v._id === variantToUpdate._id) {
         // เจอ variant ที่ id ตรงกัน → อัปเดต
         return { ...variantToUpdate };
       }
@@ -141,23 +107,36 @@ export default function ProductList(): React.ReactElement {
       }
       return v;
     });
-  }
+  };
 
-  const handleSetSuccess = (id: string | number, variant: ProductVariant) => {
-    // console.log(products,'products');
+  // Helper หา variant ในต้นไม้
+  const findVariantInTree = (
+    variants: ProductVariantBase[],
+    id: string
+  ): boolean => {
+    for (const v of variants) {
+      if (v._id === id) return true;
+      if (v.variants && v.variants.length > 0) {
+        if (findVariantInTree(v.variants, id)) return true;
+      }
+    }
+    return false;
+  };
+
+  const handleSetSuccess = (id: string | number, variant: ProductVariantBase) => {
     console.log(variant, "variant");
     setProducts((prev) =>
       prev.map((p) => {
         console.log(id, "id");
 
-        if (p.id !== id) return p;
+        if (p._id !== id) return p;
         // ถ้ายังไม่มี variants ให้สร้างใหม่
         if (!p.variants) {
           return { ...p, variants: [variant] };
         }
 
         // ถ้ามีอยู่แล้ว → update แบบ recursive
-        const found = findVariantInTree(p.variants, variant.id);
+        const found = findVariantInTree(p.variants, variant._id as string);
         console.log(found, "found");
 
         return {
@@ -171,16 +150,38 @@ export default function ProductList(): React.ReactElement {
     setModalVariant({ type: "none" });
   };
 
-  // Helper หา variant ในต้นไม้
-  function findVariantInTree(variants: ProductVariant[], id: string): boolean {
-    for (const v of variants) {
-      if (v.id === id) return true;
-      if (v.variants && v.variants.length > 0) {
-        if (findVariantInTree(v.variants, id)) return true;
+  const handleDelete = async (id: string) => {
+    if (!id) return;
+
+    // ยืนยันอีกที (ถ้าใช้ modal ไม่ต้องใส่ confirm นี้)
+    // if (!window.confirm("คุณต้องการลบสินค้านี้ใช่หรือไม่?")) return;
+
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/products/${id}`,
+        {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+        }
+      );
+
+      if (res.ok) {
+        toast.success("Product deleted successfully");
+        // ลบออกจาก state
+        setProducts((prev) => prev.filter((p) => p._id !== id));
+        // หรือถ้าใน db กลับมา _id ให้ filter ด้วย _id ก็ได้
+      } else {
+        const data = await res.json();
+        toast.error(data.message || "Failed to delete product");
       }
+    } catch (err) {
+      toast.error("An error occurred while deleting the product");
+      console.error(err);
     }
-    return false;
-  }
+  };
+
+  if (loading) return <div>Loading...</div>;
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
@@ -224,7 +225,7 @@ export default function ProductList(): React.ReactElement {
           </thead>
           <tbody>
             {products.map((p) => (
-              <React.Fragment key={p.id}>
+              <React.Fragment key={p._id}>
                 <tr
                   className={`border-gray-700 hover:bg-gray-900 ${
                     Array.isArray(p.variants) && p.variants.length > 0
@@ -234,7 +235,7 @@ export default function ProductList(): React.ReactElement {
                   onClick={() => {
                     console.log(p, "product");
                     if (Array.isArray(p.variants) && p.variants.length > 0) {
-                      toggleVariant(p.id);
+                      toggleVariant(p._id);
                     }
                   }}
                 >
@@ -242,7 +243,7 @@ export default function ProductList(): React.ReactElement {
                     {p.name}
                     {p.variants && p.variants.length > 0 && (
                       <span className="ml-2 text-xs">
-                        {openVariantIds.includes(p.id) ? "▲" : "▼"}
+                        {openVariantIds.includes(p._id) ? "▲" : "▼"}
                       </span>
                     )}
                   </td>
@@ -264,12 +265,15 @@ export default function ProductList(): React.ReactElement {
                     ) : null}
                   </td>
                   <td className="px-4 py-3 border border-gray-700 text-right">
-                    {p.price?.toFixed(2)}
+                    {typeof p.price === "number" ? p.price.toLocaleString("en-US", { minimumFractionDigits: 2 }) : ""}
                   </td>
                   <td className="px-4 py-3 border border-gray-700 text-right">
-                    {p.stock || ""}
+                    {typeof p.stock === "number" ? p.stock.toLocaleString("en-US", { minimumFractionDigits: 0 }) : ""}
                   </td>
-                  <td className="px-4 py-3 border border-gray-700 text-center space-y-1">
+                  <td
+                    onClick={(e) => e.stopPropagation()}
+                    className="px-4 py-3 border border-gray-700 text-center space-y-1"
+                  >
                     <button
                       onClick={() =>
                         setModalProduct({ type: "edit", product: p })
@@ -278,7 +282,10 @@ export default function ProductList(): React.ReactElement {
                     >
                       Edit
                     </button>
-                    <button className="px-2 py-1 text-red-600 hover:text-red-700 hover:underline cursor-pointer">
+                    <button
+                      onClick={() => setDeleteTargetId(p._id)}
+                      className="px-2 py-1 text-red-600 hover:text-red-700 hover:underline cursor-pointer"
+                    >
                       Delete
                     </button>
                   </td>
@@ -286,7 +293,7 @@ export default function ProductList(): React.ReactElement {
                 {/* --- แถวแสดง variants ถ้ามี --- */}
                 {Array.isArray(p.variants) &&
                   p.variants.length > 0 &&
-                  openVariantIds.includes(p.id) && (
+                  openVariantIds.includes(p._id) && (
                     <tr className="bg-gray-900/70">
                       <td colSpan={7} className="border-gray-800">
                         <div className="ml-4 mb-4">
@@ -295,7 +302,7 @@ export default function ProductList(): React.ReactElement {
                           </div> */}
                           <VariantTable
                             variants={p.variants}
-                            productId={p.id}
+                            productId={p._id}
                             onSet={(productId, variant) =>
                               setModalVariant({
                                 type: "set",
@@ -368,6 +375,19 @@ export default function ProductList(): React.ReactElement {
           )}
         </Modal>
       )}
+
+      {/* Modal แยก */}
+      <ConfirmModal
+        open={!!deleteTargetId}
+        title="ยืนยันการลบ"
+        message="คุณต้องการลบรายการนี้ใช่หรือไม่?"
+        confirmText="ลบ"
+        cancelText="ยกเลิก"
+        onConfirm={() => {
+          if (deleteTargetId) handleDelete(deleteTargetId);
+        }}
+        onCancel={() => setDeleteTargetId(null)}
+      />
     </div>
   );
 }

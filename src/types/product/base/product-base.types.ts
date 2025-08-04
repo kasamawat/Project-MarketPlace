@@ -3,24 +3,18 @@ import { ProductCategory } from "../enums/product-category.enum";
 import { ProductType } from "../enums/product-type.enum";
 import { Store } from "@/types/store.types";
 
-export interface ProductVariant {
-  id:  string; // UUID
+export interface ProductVariantBase {
+  _id?:  string; // UUID
   name: string; // เช่น "Color"
   value?: string; // เช่น "Black"
   image?: string;
   price?: number; // เช่น +200
   stock?: number; // เช่น 10 ชิ้น
-  variants?: ProductVariant[];
-  status?: "normal" | "editing" | "new";
-}
-
-export interface ProductAttribute {
-  key: string;   // เช่น "Battery"
-  value: string; // เช่น "4000mAh"
+  variants?: ProductVariantBase[];
 }
 
 export interface ProductBase {
-  id: string | number;
+  _id: string;
   storeId?: string | number;
   name: string;
   description: string;
@@ -32,8 +26,7 @@ export interface ProductBase {
   
   // เพิ่มเพื่อใช้ในหน้าจอเพิ่ม/แสดงสินค้า
   stock?: number;
-  variants?: ProductVariant[];
-  attributes?: ProductAttribute[];
+  variants?: ProductVariantBase[];
   createdAt?: Date | string;
   updatedAt?: Date | string;
 }
