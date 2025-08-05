@@ -12,6 +12,18 @@ type ProductFormProps = {
   onCancel?: () => void;
 };
 
+const initialForm: ProductBase = {
+  _id: "", // ถ้าสร้างใหม่ _id เป็น "" หรือ undefined
+  name: "",
+  description: "",
+  category: ProductCategory.allCategory,
+  type: ProductType.allType,
+  image: "",
+  price: 0,
+  stock: 0,
+  variants: [],
+};
+
 export default function ProductForm({
   product,
   mode = "add",
@@ -20,19 +32,7 @@ export default function ProductForm({
 }: ProductFormProps) {
   console.log(product, "product");
 
-  const [form, setForm] = useState<ProductBase>(
-    product || {
-      _id: "",
-      name: "",
-      description: "",
-      category: ProductCategory.allCategory,
-      type: ProductType.allType,
-      image: "",
-      price: 0,
-      stock: 0,
-      variants: [],
-    }
-  );
+  const [form, setForm] = useState<ProductBase>(product || initialForm);
   const [variantGroup, setVariantGroup] = useState(
     product?.variants?.[0]?.name || ""
   ); // เช่น สี, ขนาด ฯลฯ
@@ -45,7 +45,7 @@ export default function ProductForm({
   // sync เมื่อ prop product มาใหม่ (edit)
   useEffect(() => {
     if (product) {
-      setForm(product);
+      setForm(product ?? initialForm);
       setHasVariant(
         Array.isArray(product.variants) && product.variants.length > 0
       );
@@ -100,6 +100,8 @@ export default function ProductForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    console.log(variantValues, "variantValues");
+
     if (hasVariant && variantValues.length === 0) {
       toast.error("กรุณาเพิ่มอย่างน้อย 1 ตัวเลือก Variant");
       return;
@@ -107,30 +109,31 @@ export default function ProductForm({
 
     const productData = { ...form }; // copy state
 
-    if (hasVariant) {
-      // ใส่ variant group ลงใน variants (ตัวอย่าง)
+    console.log(productData, "productData");
 
-      productData.variants = [
-        ...(productData.variants || []),
-        ...variantValues
-          .filter((v) => v.trim() !== "") // เผื่อผู้ใช้ใส่ช่องว่าง
-          .map((v) => ({
-            // _id: "",
-            name: variantGroup, // group เดียวกัน เช่น "สี" หรือ "ขนาด"
-            value: v, // value จาก input
-            image: "",
-            price: 0,
-            stock: 0,
-            variants: [],
-          })),
-      ];
-      // ลบ/รีเซ็ต field เดี่ยวถ้ามี
+    if (hasVariant) {
+      productData.variants = variantValues
+        .filter((v) => v.trim() !== "")
+        .map((v) => {
+          // หา _id เดิมจาก productData.variants (ต้องแน่ใจว่าเป็น array ของ object)
+          const old = Array.isArray(productData.variants)
+            ? productData.variants.find((ov) => ov.value === v)
+            : undefined;
+          return {
+            _id: old?._id, // ถ้ามี _id เดิมก็ใส่
+            name: variantGroup,
+            value: v,
+            image: old?.image ?? "",
+            price: old?.price ?? 0,
+            stock: old?.stock ?? 0,
+            variants: old?.variants ?? [],
+          };
+        });
 
       delete productData.image;
       delete productData.price;
       delete productData.stock;
     } else {
-      // ถ้าไม่มี variant, ลบ variants ออก
       delete productData.variants;
     }
 
@@ -246,11 +249,15 @@ export default function ProductForm({
           onChange={(e) => {
             setHasVariant(e.target.checked);
             if (e.target.checked) {
-              delete form.image;
-              delete form.price;
-              delete form.stock;
+              setForm((prev) => {
+                const { image, price, stock, ...rest } = prev;
+                return rest;
+              });
             } else {
-              delete form.variants;
+              setForm((prev) => {
+                const { variants, ...rest } = prev;
+                return rest;
+              });
             }
           }}
           className="mr-2"
@@ -323,7 +330,7 @@ export default function ProductForm({
                 {val}
                 <button
                   type="button"
-                  className="ml-2 text-red-600 hover:text-red-800"
+                  className="ml-2 text-red-600 hover:text-red-800 cursor-pointer"
                   onClick={() => removeVariantValue(idx)}
                   title="ลบ"
                 >
@@ -364,7 +371,13 @@ export default function ProductForm({
         </button>
         <button
           type="button"
-          onClick={() => console.log("TEST")}
+          onClick={() => {
+            setForm(product ?? initialForm);
+            setHasVariant(
+              Array.isArray(product?.variants) && product.variants.length > 0
+            );
+            onCancel?.();
+          }}
           className="text-red-600 hover:text-red-700 hover:underline cursor-pointer"
         >
           Cancel

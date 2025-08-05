@@ -13,5 +13,5 @@ export async function getStoreById(
   stores = await getAllStores();
 
   const storeId = id;
-  return stores.find((p) => p.id === storeId) || null;
+  return stores.find((p) => p._id === storeId) || null;
 }

@@ -41,10 +41,10 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     console.log(product,'product');
     
     setCartItems((prevCart) => {
-      const existing = prevCart.find((item) => item.id === product.id);
+      const existing = prevCart.find((item) => item._id === product._id);
       if (existing) {
         return prevCart.map((item) =>
-          item.id === product.id
+          item._id === product._id
             ? { ...item, quantity: item.quantity + quantity }
             : item
         );
@@ -55,7 +55,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
   const removeFromCart = (productId: string | number) => {
     setCartItems((prevCart) =>
-      prevCart.filter((item) => item.id !== productId)
+      prevCart.filter((item) => item._id !== productId)
     );
   };
 

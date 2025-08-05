@@ -28,11 +28,11 @@ export default function ProductCard({ product }: { product: Product }) {
           onMouseOut={() => setOnHover(false)}
         >
           <Link
-            href={`/products/${product.id}`}
+            href={`/products/${product._id}`}
             className="group rounded-lg overflow-hidden shadow hover:shadow-lg transition"
           >
             <Image
-              src={product.image}
+              src={product.image ?? ""}
               alt={product.name}
               width={400}
               height={300}
@@ -48,13 +48,13 @@ export default function ProductCard({ product }: { product: Product }) {
             <div
               className={`w-1/6 ${styles.actionButton} border-r border-gray-900`}
               onClick={() =>
-                console.log(`Link ${product.id} : ${product.name}`)
+                console.log(`Link ${product._id} : ${product.name}`)
               }
             >
               ❤️
             </div>
             <Link
-              href={`/products/${product.id}`}
+              href={`/products/${product._id}`}
               className={`w-4/6 ${styles.actionButton}`}
             >
               View Details
@@ -62,7 +62,7 @@ export default function ProductCard({ product }: { product: Product }) {
             <div
               className={`w-1/6 ${styles.actionButton} border-l border-gray-900`}
               onClick={() => {
-                console.log(`PreView ${product.id} : ${product.name}`);
+                console.log(`PreView ${product._id} : ${product.name}`);
                 setShowPreview(true);
               }}
             >

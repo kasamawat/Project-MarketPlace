@@ -22,8 +22,7 @@ export interface ProductBase {
   price?: number;
   category: ProductCategory;
   type: ProductType;
-  store?: Store;
-  
+  store?: Store;  
   // เพิ่มเพื่อใช้ในหน้าจอเพิ่ม/แสดงสินค้า
   stock?: number;
   variants?: ProductVariantBase[];

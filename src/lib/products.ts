@@ -13,7 +13,7 @@ export async function getProduct(
   products = await getAllProducts();
 
   const productId = id;
-  return products.find((p) => p.id === productId) || null;
+  return products.find((p) => p._id === productId) || null;
 }
 
 export async function getProductsByStore(

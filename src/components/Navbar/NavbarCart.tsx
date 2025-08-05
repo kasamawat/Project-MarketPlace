@@ -85,10 +85,10 @@ const NavbarCart: React.FC = () => {
           >
             <ul className="divide-y divide-gray-200 max-h-72 overflow-y-auto">
               {cartItems.map((item) => (
-                <li key={item.id} className="py-2 text-sm flex justify-between">
+                <li key={item._id} className="py-2 text-sm flex justify-between">
                   <div className="grid grid-cols-6 flex items-center gap-2">
                     <div className="p-2 col-span-2 flex items-center justify-center">
-                      <Link href={`/products/${item.id}`}>
+                      <Link href={`/products/${item._id}`}>
                         <Image
                           src={item.image}
                           alt={item.name}
@@ -108,7 +108,7 @@ const NavbarCart: React.FC = () => {
                     <div className="col-span-1 flex items-center justify-center">
                       <button
                         className="h-full text-sm text-white hover:text-gray-700 cursor-pointer bg-red-500 border-circles rounded-full p-1"
-                        onClick={() => removeFromCart(item.id)}
+                        onClick={() => removeFromCart(item._id)}
                       >
                         <svg
                           xmlns="http://www.w3.org/2000/svg"

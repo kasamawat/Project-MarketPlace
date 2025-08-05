@@ -5,7 +5,7 @@ import { Product } from "@/types/product/product.types";
 // Products for Store 1
 export const owner1Products: Product[] = [
   {
-    id: "4ac460a1-52de-4b3f-bac5-0197b2e99d51",
+    _id: "4ac460a1-52de-4b3f-bac5-0197b2e99d51",
     name: "Smartphone - Model X",
     type: ProductType.Electronics,
     category: ProductCategory.Smartphone,
@@ -13,18 +13,20 @@ export const owner1Products: Product[] = [
     description: "A high-end smartphone with a sleek design and powerful features.",
     price: 699.99,
     variants: [],
-    attributes: [],
     storeId: "store-001",
     store: {
-      id: "store-001",
+      _id: "store-001",
       name: "Tech Haven",
+      slug: "tech-haven",
       description: "ร้านสินค้าอิเล็กทรอนิกส์ทันสมัยทุกชนิด",
       image: "/images/store1.jpg",
       ownerId: "test-1",
+      status: "approved",
+      createdAt: new Date(),
     },
   },
   {
-    id: "524dfc0e-06b3-41c2-9109-3be2d00913a3",
+    _id: "524dfc0e-06b3-41c2-9109-3be2d00913a3",
     name: "Laptop - Model Y",
     type: ProductType.Electronics,
     category: ProductCategory.Laptop,
@@ -32,14 +34,16 @@ export const owner1Products: Product[] = [
     description: "A lightweight laptop with a long-lasting battery and high performance.",
     price: 1299.99,
     variants: [],
-    attributes: [],
     storeId: "store-001",
     store: {
-      id: "store-001",
+      _id: "store-001",
       name: "Tech Haven",
+      slug: "tech-haven",
       description: "ร้านสินค้าอิเล็กทรอนิกส์ทันสมัยทุกชนิด",
       image: "/images/store1.jpg",
       ownerId: "test-1",
+      status: "approved",
+      createdAt: new Date(),
     },
   },
 ];
@@ -47,7 +51,7 @@ export const owner1Products: Product[] = [
 // Products for Store 2
 export const owner2Products: Product[] = [
   {
-    id: "a6dbd8aa-04a9-4e71-9c6a-1f0d702f712a",
+    _id: "a6dbd8aa-04a9-4e71-9c6a-1f0d702f712a",
     name: "T-Shirt - White",
     type: ProductType.Fashion,
     category: ProductCategory.TShirt,
@@ -55,18 +59,21 @@ export const owner2Products: Product[] = [
     description: "A comfortable white t-shirt made from 100% cotton.",
     price: 19.99,
     variants: [],
-    attributes: [],
+
     storeId: "store-002",
     store: {
-      id: "store-002",
+      _id: "store-002",
       name: "Home & Fashion",
+      slug: "home-and-fashion",
       description: "แฟชั่นและเฟอร์นิเจอร์สำหรับทุกคน",
       image: "/images/store2.jpg",
-      ownerId: "test-2"
+      ownerId: "test-2",
+      status: "approved",
+      createdAt: new Date(),
     },
   },
   {
-    id: "2e2f2452-8e71-4625-b89e-09fa44749355",
+    _id: "2e2f2452-8e71-4625-b89e-09fa44749355",
     name: "Denim Jacket",
     type: ProductType.Fashion,
     category: ProductCategory.Jacket,
@@ -74,18 +81,21 @@ export const owner2Products: Product[] = [
     description: "A stylish denim jacket perfect for casual outings.",
     price: 49.99,
     variants: [],
-    attributes: [],
+
     storeId: "store-002",
     store: {
-      id: "store-002",
+      _id: "store-002",
       name: "Home & Fashion",
+      slug: "home-and-fashion",
       description: "แฟชั่นและเฟอร์นิเจอร์สำหรับทุกคน",
       image: "/images/store2.jpg",
-      ownerId: "test-2"
+      ownerId: "test-2",
+      status: "approved",
+      createdAt: new Date(),
     },
   },
   {
-    id: "dcf7b6fa-66bb-4710-86ee-fb7f2468caa5",
+    _id: "dcf7b6fa-66bb-4710-86ee-fb7f2468caa5",
     name: "Wooden Chair",
     type: ProductType.Furniture,
     category: ProductCategory.Chair,
@@ -93,18 +103,21 @@ export const owner2Products: Product[] = [
     description: "A classic wooden chair with a comfortable design.",
     price: 39.99,
     variants: [],
-    attributes: [],
+
     storeId: "store-002",
     store: {
-      id: "store-002",
+      _id: "store-002",
       name: "Home & Fashion",
+      slug: "home-and-fashion",
       description: "แฟชั่นและเฟอร์นิเจอร์สำหรับทุกคน",
       image: "/images/store2.jpg",
-      ownerId: "test-2"
+      ownerId: "test-2",
+      status: "approved",
+      createdAt: new Date(),
     },
   },
   {
-    id: "f7b9dc6f-4161-4266-9cb1-5053e8ef31d9",
+    _id: "f7b9dc6f-4161-4266-9cb1-5053e8ef31d9",
     name: "Modern Sofa",
     type: ProductType.Furniture,
     category: ProductCategory.Sofa,
@@ -112,18 +125,21 @@ export const owner2Products: Product[] = [
     description: "A stylish modern sofa that fits any living room.",
     price: 299.99,
     variants: [],
-    attributes: [],
+
     storeId: "store-002",
     store: {
-      id: "store-002",
+      _id: "store-002",
       name: "Home & Fashion",
+      slug: "home-and-fashion",
       description: "แฟชั่นและเฟอร์นิเจอร์สำหรับทุกคน",
       image: "/images/store2.jpg",
-      ownerId: "test-2"
+      ownerId: "test-2",
+      status: "approved",
+      createdAt: new Date(),
     },
   },
   {
-    id: "44a90a88-9ef4-4900-a6d2-27fcf0b126f7",
+    _id: "44a90a88-9ef4-4900-a6d2-27fcf0b126f7",
     name: "Bookshelf",
     type: ProductType.Furniture,
     category: ProductCategory.Bookshelf,
@@ -131,18 +147,21 @@ export const owner2Products: Product[] = [
     description: "A spacious bookshelf perfect for organizing your books.",
     price: 79.99,
     variants: [],
-    attributes: [],
+
     storeId: "store-002",
     store: {
-      id: "store-002",
+      _id: "store-002",
       name: "Home & Fashion",
+      slug: "home-and-fashion",
       description: "แฟชั่นและเฟอร์นิเจอร์สำหรับทุกคน",
       image: "/images/store2.jpg",
-      ownerId: "test-2"
+      ownerId: "test-2",
+      status: "approved",
+      createdAt: new Date(),
     },
   },
   {
-    id: "174ae071-6f3c-4ef6-bdad-b6482788d234",
+    _id: "174ae071-6f3c-4ef6-bdad-b6482788d234",
     name: "Dining Table",
     type: ProductType.Furniture,
     category: ProductCategory.Table,
@@ -150,14 +169,17 @@ export const owner2Products: Product[] = [
     description: "A beautiful dining table that seats six people.",
     price: 249.99,
     variants: [],
-    attributes: [],
+
     storeId: "store-002",
     store: {
-      id: "store-002",
+      _id: "store-002",
       name: "Home & Fashion",
+      slug: "home-and-fashion",
       description: "แฟชั่นและเฟอร์นิเจอร์สำหรับทุกคน",
       image: "/images/store2.jpg",
-      ownerId: "test-2"
+      ownerId: "test-2",
+      status: "approved",
+      createdAt: new Date(),
     },
   },
 ];

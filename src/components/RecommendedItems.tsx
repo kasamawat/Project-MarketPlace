@@ -19,7 +19,7 @@ export default async function RecommendedItems() {
       <h2 className="text-2xl font-bold mb-10 text-center">Recommended Items</h2>
       <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
         {recommendedItems.map((product) => (
-          <ProductCard key={product.id} product={product} />
+          <ProductCard key={product._id} product={product} />
         ))}
       </div>
     </section>

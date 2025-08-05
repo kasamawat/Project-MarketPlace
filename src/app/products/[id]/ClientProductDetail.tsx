@@ -27,7 +27,7 @@ export default function ClientProductDetail({ product }: { product: Product }) {
     <div className="flex flex-col md:flex-row gap-6 h-full">
       <div className="w-full pl-6 pr-6">
         <Image
-          src={product.image}
+          src={product.image ?? ""}
           alt={product.name}
           width={800}
           height={600}
@@ -48,7 +48,7 @@ export default function ClientProductDetail({ product }: { product: Product }) {
           <h3 className="text-md font-bold text-sm">
             Sold By:{" "}
             <Link
-              href={`/stores/${product.store.id}`}
+              href={`/stores/${product.store._id}`}
               className="text-blue-600 hover:underline text-sm"
             >
               {product.store.name}

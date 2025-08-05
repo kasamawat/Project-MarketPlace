@@ -10,8 +10,8 @@ export async function getSearchResults(query: string) {
     const stores = await getAllStores();
 
     const results = [
-        ...stores.map((s) => ({ id: s.id, name: s.name, type: "store" as const })),
-        ...products.map((p) => ({ id: p.id, name: p.name, type: "product" as const })),
+        ...stores.map((s) => ({ id: s._id, name: s.name, type: "store" as const })),
+        ...products.map((p) => ({ id: p._id, name: p.name, type: "product" as const })),
     ];
 
     return results.filter((item) => item.name.toLowerCase().includes(q));

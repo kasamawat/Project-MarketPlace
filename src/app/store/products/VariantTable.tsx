@@ -1,6 +1,7 @@
 import { ProductVariantBase } from "@/types/product/base/product-base.types";
 import Image from "next/image";
 import React from "react";
+import toast from "react-hot-toast";
 
 type VariantTableProps = {
   variants: ProductVariantBase[];
@@ -9,6 +10,7 @@ type VariantTableProps = {
   onSet: (productId: string | number, variant: ProductVariantBase) => void;
   openVariantIds: (string | number)[];
   onToggle: (id: string | number) => void;
+  onDelete: (productId: string | number, variantId: string | number) => void;
 };
 
 const VariantTable: React.FC<VariantTableProps> = ({
@@ -18,6 +20,7 @@ const VariantTable: React.FC<VariantTableProps> = ({
   onSet,
   openVariantIds,
   onToggle,
+  onDelete,
 }) => (
   <div>
     <div className="flex font-bold text-lg mt-2 mb-2 text-gray-300">
@@ -31,48 +34,78 @@ const VariantTable: React.FC<VariantTableProps> = ({
     >
       <thead className="bg-gray-600 text-white">
         <tr className="text-center">
-          {/* <th className="px-4 py-1.5 border border-gray-700 w-1/6">Group</th> */}
-          <th className="px-4 py-1.5 border border-gray-700 w-1/3">Value</th>
+          <th className="px-4 py-1.5 border border-gray-700 w-1/6">Value</th>
           <th className="px-4 py-1.5 border border-gray-700 w-1/6">Image</th>
           <th className="px-4 py-1.5 border border-gray-700 w-1/6">
             Price (THB)
           </th>
           <th className="px-4 py-1.5 border border-gray-700 w-1/6">Stock</th>
-          <th className="px-4 py-1.5 border border-gray-700 w-1/6">Actions</th>
+          <th className="px-4 py-1.5 border border-gray-700 w-1/12">Actions</th>
         </tr>
       </thead>
       <tbody>
         {variants.map((v) => (
           <React.Fragment key={v._id}>
             <tr
-              className={
+              className={`${
                 v.variants && v.variants.length > 0
-                  ? "cursor-pointer hover:bg-gray-900"
+                  ? "cursor-pointer hover:bg-gray-950"
                   : ""
-              }
+              } ${
+                openVariantIds.includes(v._id as string) ? "bg-gray-900" : ""
+              }`}
               onClick={() => {
-                if (v.variants && v.variants.length > 0) onToggle(v._id as string);
+                if (v.variants && v.variants.length > 0)
+                  onToggle(v._id as string);
               }}
             >
-              {/* <td
-                className={`px-4 py-1.5 border border-gray-700 text-left opacity-20`}
-                style={{ paddingLeft: parentLevel * 24 }}
-              >
-                {v.name}
-                {v.variants && v.variants.length > 0 && (
-                  <span className="ml-2 text-xs">
-                    {openVariantIds.includes(v._id) ? "▲" : "▼"}
-                  </span>
-                )}
-              </td> */}
               <td className="px-4 py-1.5 border border-gray-700 text-left">
-                {v.value}
-                {v.variants && v.variants.length > 0 && (
-                  <span className="ml-2 text-xs">
-                    {openVariantIds.includes(v._id as string) ? "▲" : "▼"}
-                  </span>
-                )}
+                <div className="flex items-center">
+                  {/* Col 1: caret icon (20% width) */}
+                  <div className="w-1/5 flex justify-center items-center">
+                    {v.variants && v.variants.length > 0 && (
+                      <span>
+                        {openVariantIds.includes(v._id as string) ? (
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="24"
+                            height="24"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="icon icon-tabler icons-tabler-outline icon-tabler-caret-down"
+                          >
+                            <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                            <path d="M6 10l6 6l6 -6h-12" />
+                          </svg>
+                        ) : (
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="24"
+                            height="24"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="icon icon-tabler icons-tabler-outline icon-tabler-caret-right"
+                          >
+                            <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                            <path d="M10 18l6 -6l-6 -6v12" />
+                          </svg>
+                        )}
+                      </span>
+                    )}
+                  </div>
+                  {/* Col 2: value (80%) */}
+                  <div className="w-4/5 pl-2 truncate">{v.value}</div>
+                </div>
               </td>
+
               <td className="px-4 py-1.5 border border-gray-700 text-right">
                 {v.image ? (
                   <Image
@@ -85,18 +118,38 @@ const VariantTable: React.FC<VariantTableProps> = ({
                 ) : null}
               </td>
               <td className="px-4 py-1.5 border border-gray-700 text-right">
-                {typeof v.price === "number" ? v.price.toLocaleString("en-US", { minimumFractionDigits: 2 }) : ""}
+                {typeof v.price === "number"
+                  ? v.price.toLocaleString("en-US", {
+                      minimumFractionDigits: 2,
+                    })
+                  : ""}
               </td>
               <td className="px-4 py-1.5 border border-gray-700 text-right">
-                {typeof v.stock === "number" ? v.stock.toLocaleString("en-US", { minimumFractionDigits: 0 }) : ""}
+                {typeof v.stock === "number"
+                  ? v.stock.toLocaleString("en-US", {
+                      minimumFractionDigits: 0,
+                    })
+                  : ""}
               </td>
-              <td className="px-4 py-3 border border-gray-700 text-center space-y-1">
+              <td
+                className="px-4 py-3 border border-gray-700 text-center space-y-1"
+                onClick={(e) => e.stopPropagation()}
+              >
                 {/* ปุ่ม action อื่นๆ */}
                 <button
                   className="px-2 py-1 text-cyan-600 hover:text-cyan-700 hover:underline cursor-pointer"
                   onClick={() => onSet(productId, v)}
                 >
                   Set
+                </button>
+                <button
+                  className="px-2 py-1 text-red-600 hover:text-red-700 hover:underline cursor-pointer"
+                  onClick={() => {
+                    if (v._id) onDelete(productId, v._id);
+                    else toast.error("ไม่พบ ID ของ variant");
+                  }}
+                >
+                  Delete
                 </button>
               </td>
             </tr>
@@ -114,6 +167,7 @@ const VariantTable: React.FC<VariantTableProps> = ({
                         onSet={onSet}
                         openVariantIds={openVariantIds}
                         onToggle={onToggle}
+                        onDelete={onDelete}
                       />
                     </div>
                   </td>

@@ -11,6 +11,15 @@ interface Props {
   productId?: string;
 }
 
+const initialForm: ProductVariantBase = {
+  _id: "", // ถ้าสร้างใหม่ _id เป็น "" หรือ undefined
+  name: "",
+  image: "",
+  price: 0,
+  stock: 0,
+  variants: [],
+};
+
 export default function VariantModal({
   variant,
   onSuccess,
@@ -19,17 +28,7 @@ export default function VariantModal({
 }: Props) {
   console.log(variant, "variant");
 
-  const [form, setForm] = useState<ProductVariantBase>(
-    variant || {
-      // _id: "",
-      name: "",
-      value: "",
-      image: "",
-      price: "",
-      stock: "",
-      variants: [],
-    }
-  );
+  const [form, setForm] = useState<ProductVariantBase>(variant || initialForm);
   const [subVariantGroup, setSubVariantGroup] = useState(
     variant?.variants?.[0]?.name || ""
   ); // เช่น สี, ขนาด ฯลฯ
@@ -183,9 +182,15 @@ export default function VariantModal({
           onChange={(e) => {
             setHasVariant(e.target.checked);
             if (e.target.checked) {
-              delete form.image;
+              setForm((prev) => {
+                const { image, price, stock, ...rest } = prev;
+                return rest;
+              });
             } else {
-              delete form.variants;
+              setForm((prev) => {
+                const { variants, ...rest } = prev;
+                return rest;
+              });
             }
           }}
           className="mr-2"
@@ -299,7 +304,13 @@ export default function VariantModal({
         </button>
         <button
           type="button"
-          onClick={() => console.log("TEST")}
+          onClick={() => {
+            setForm(variant ?? initialForm);
+            setHasVariant(
+              Array.isArray(variant?.variants) && variant.variants.length > 0
+            );
+            onCancel?.();
+          }}
           className="text-red-600 hover:text-red-700 hover:underline cursor-pointer"
         >
           Cancel

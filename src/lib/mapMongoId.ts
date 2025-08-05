@@ -1,6 +1,6 @@
 // src/lib/mapMongoId.ts
 
-import { ProductVariant } from "@/types/product/base/product-base.types";
+import { ProductVariantBase } from "@/types/product/base/product-base.types";
 
 type WithId<T> = Omit<T, "_id" | "variants"> & {
   id: string;
@@ -10,7 +10,7 @@ type WithId<T> = Omit<T, "_id" | "variants"> & {
 /**
  * แปลง Mongo _id เป็น id + map nested variants (recursive)
  */
-export function mapMongoId<T extends { _id?: string; variants?: ProductVariant[] }>(doc: T): WithId<T> {
+export function mapMongoId<T extends { _id?: string; variants?: ProductVariantBase[] }>(doc: T): WithId<T> {
   const { _id, variants, ...rest } = doc;
 
   // Map variants recursive
@@ -28,6 +28,6 @@ export function mapMongoId<T extends { _id?: string; variants?: ProductVariant[]
 /**
  * สำหรับ array หลายตัว
  */
-export function mapMongoIdArray<T extends { _id?: string; variants?: ProductVariant[] }>(docs: T[]): WithId<T>[] {
+export function mapMongoIdArray<T extends { _id?: string; variants?: ProductVariantBase[] }>(docs: T[]): WithId<T>[] {
   return docs.map(mapMongoId);
 }

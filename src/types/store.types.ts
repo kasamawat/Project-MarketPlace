@@ -16,4 +16,5 @@ export type Store = {
     ownerId: string;
     status: StoreStatus;
     createdAt: Date;
+    image: string
 };
