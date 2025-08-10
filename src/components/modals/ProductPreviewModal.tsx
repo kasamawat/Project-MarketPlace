@@ -1,10 +1,11 @@
 // components/ProductPreviewModal.tsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { useCart } from "@/app/context/CartContext";
 import { Product } from "@/types/product/product.types";
 import Link from "next/link";
 import { FaRegStar, FaStar, FaStarHalfAlt } from "react-icons/fa";
+import { getAllVariantPrices, extractCombinations } from "@/lib/functionTools";
 
 type Props = {
   product: Product;
@@ -18,13 +19,88 @@ const ProductPreviewModal = ({
   onClose,
 }: Props): React.ReactElement => {
   const { addToCart } = useCart();
+  // console.log(product, "product");
 
-  const opacitys = ["128GB", "256GB", "512GB"];
-  const colors = ["#000000", "#ffffff", "#ff0000", "#00ff00", "#0000ff"];
+  const prices = getAllVariantPrices(product.variants ?? []);
+  const minPrice = prices.length ? Math.min(...prices) : 0;
+  const maxPrice = prices.length ? Math.max(...prices) : 0;
+
+  const [selectedOptions, setSelectedOptions] = useState<
+    Record<string, string>
+  >({});
+  // console.log(selectedOptions, "selectedOptions");
+
+  // สร้าง combinations ตอน render page/receive product
+  const allCombinations = useMemo(
+    () => extractCombinations(product.variants ?? []),
+    [product]
+  );
+  console.log(allCombinations, "allCombinations");
+
+  // หาทุก field จริง (Color/Size/Sex ...) อัตโนมัติ
+  const allFields = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          allCombinations.flatMap((c) =>
+            Object.keys(c).filter((k) => !["_id", "price", "stock"].includes(k))
+          )
+        )
+      ),
+    [allCombinations]
+  );
+
+  console.log(allFields, "allFields");
+
+  const masterOptions: Record<string, string[]> = useMemo(() => {
+    const opts: Record<string, string[]> = {};
+    allFields.forEach((field) => {
+      opts[field] = Array.from(
+        new Set(allCombinations.map((c) => c[field]))
+      ).filter(Boolean);
+    });
+    return opts;
+  }, [allCombinations, allFields]);
+
+  // console.log(masterOptions, "masterOptions");
+
+  // ฟังก์ชัน filter ตัวเลือก option ตาม selection ปัจจุบัน
+  function getAvailableOptionsForField(field: string) {
+    const available = new Set(allCombinations.map((c) => c[field]));
+    return (masterOptions[field] ?? []).filter((opt) => available.has(opt));
+  }
+
+  function isOptionAvailable(currentField: string, opt: string) {
+    return allCombinations.some(
+      (comb) =>
+        Object.entries(selectedOptions).every(([k, v]) =>
+          k === currentField ? true : comb[k] === v
+        ) && comb[currentField] === opt
+    );
+  }
+
+  // หาคู่ selected ปัจจุบัน (เอา price/stock)
+  const matched = allCombinations.find((comb) => {
+    // filter เอาแต่ field จริง (ไม่เอา _id, price, stock)
+    const fields = Object.keys(comb).filter(
+      (k) => !["_id", "price", "stock"].includes(k)
+    );
+    // ต้องเลือกครบทุก field ของ combination นั้น
+    return (
+      fields.every((f) => selectedOptions[f]) &&
+      fields.every((f) => selectedOptions[f] === comb[f])
+    );
+  });
+
+  console.log(selectedOptions, "selectedOptions");
+
+  console.log(matched, "matched");
+
+  const selectedPrice = matched?.price ?? 0;
+  const selectedStock = matched?.stock ?? 0;
+  // const selectedPrice = lastSelectedVariant?.price;
 
   const [isVisible, setIsVisible] = useState(false);
-  const [selected, setSelected] = useState<string | null>(opacitys[0]);
-  const [colorSelected, setColorSelected] = useState<string | null>(colors[0]);
   const [count, setCount] = useState(1);
   const [isWishlisted, setIsWishlisted] = useState(false);
 
@@ -67,7 +143,7 @@ const ProductPreviewModal = ({
         <div className="p-4 grid grid-cols-3 gap-4">
           <div className="col-span-1 sm:col-span-1 pl-2 pr-2">
             <Image
-              src={product.image}
+              src={product.image ?? "/no-image.png"}
               alt={product.name}
               width={400}
               height={300}
@@ -80,17 +156,21 @@ const ProductPreviewModal = ({
             </h2>
             <div className="mb-2">
               <span className="text-green-600 font-semibold text-lg mt-4">
-                ฿
-                {product.price.toLocaleString(undefined, {
-                  minimumFractionDigits: 2,
-                })}
+                {selectedPrice !== undefined
+                  ? `฿ ${selectedPrice.toLocaleString()}`
+                  : prices.length > 1
+                  ? `฿ ${minPrice.toLocaleString()} - ${maxPrice.toLocaleString()}`
+                  : `฿ ${minPrice.toLocaleString()}`}
+                {/* {prices.length > 1
+                  ? `฿ ${minPrice.toLocaleString()} - ${maxPrice.toLocaleString()}`
+                  : `฿ ${minPrice.toLocaleString()}`} */}
               </span>
             </div>
             <div className="mb-2">
               <h3 className="text-md font-bold text-sm">
                 Sold By:{" "}
                 <Link
-                  href={`/stores/${product.store.id}`}
+                  href={`/stores/${product.store._id}`}
                   className="text-blue-600 hover:underline text-sm"
                 >
                   {product.store.name}
@@ -119,65 +199,76 @@ const ProductPreviewModal = ({
                 commodi ullam enim.
               </span>
             </div>
-            <div className="grid grid-cols-5 gap-4">
-              <div className="col-span-2">
-                <div className="flex flex-col mb-2">
-                  <span className="text-md text-white pb-2">Capacity</span>
+            {allFields.map((field) => {
+              const options =
+                getAvailableOptionsForField(field).filter(Boolean);
+              console.log(options, "options");
+
+              return (
+                <div key={field} className="mb-2">
+                  {/* {options.length === 0 ? null : (
+                    <>
+                    </>
+                  )} */}
+                  <span className="block text-md text-white pb-2">{field}</span>
+                  <div className="flex flex-wrap gap-2">
+                    {options.map((opt) => (
+                      <button
+                        key={opt}
+                        disabled={!isOptionAvailable(field, opt)}
+                        className={`px-3 py-1 rounded border text-sm 
+                          ${
+                            selectedOptions[field] === opt
+                              ? "bg-blue-600 text-white border-blue-700"
+                              : (!isOptionAvailable(field, opt) ? "" : "border-gray-400 text-white hover:bg-gray-700")
+                          }
+                          ${
+                            !isOptionAvailable(field, opt) ? "opacity-50" : "cursor-pointer"
+                          }
+                        `}
+                        onClick={() => {
+                          setSelectedOptions((prev) => {
+                            // toggle: ถ้าเลือกอันเดิม → ลบ key ทิ้งเลย
+                            if (prev[field] === opt) {
+                              // ลบ field ออกจาก object
+                              const updated = { ...prev };
+                              delete updated[field];
+                              return updated;
+                            }
+                            // เลือกใหม่/เปลี่ยน
+                            return {
+                              ...prev,
+                              [field]: opt,
+                            };
+                          });
+
+                          if (matched) {
+                            setCount(1);
+                          }
+                        }}
+                      >
+                        {opt}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <div className="flex flex-wrap gap-1">
-                  {opacitys.map((option) => (
-                    <button
-                      key={option}
-                      onClick={() => {
-                        setSelected(option);
-                        console.log(`Selected option: ${option}`);
-                      }}
-                      className={`text-sm p-1 border-1 border-solid border-gray-600 cursor-pointer ${
-                        selected === option
-                          ? "bg-gray-500 text-white border-gray-600"
-                          : "border-gray-600 text-white hover:bg-gray-700"
-                      }`}
-                    >
-                      {option}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div className="col-span-3">
-                <div className="flex flex-col mb-2">
-                  <span className="text-md text-white pb-2">Color</span>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {colors.map((color) => (
-                    <button
-                      key={color}
-                      onClick={() => {
-                        setColorSelected(color);
-                        console.log(`Selected option: ${color}`);
-                      }}
-                      title={color}
-                      className={`w-9 h-9 rounded-full cursor-pointer flex items-center justify-center ${
-                        colorSelected === color
-                          ? "border-1 border-solid border-gray-600"
-                          : "border-gray-600 text-white"
-                      }`}
-                    >
-                      <div
-                        className="text-sm w-6 h-6 p-1 rounded-full border-1 border-solid border-gray-600"
-                        style={{ backgroundColor: color }}
-                      ></div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
+              );
+            })}
+
             <div className="grid grid-cols-4 gap-4 mt-6 items-center">
               {/* กล่องจำนวน */}
-              <div className="col-span-1">
-                <div className="flex items-center justify-center w-full border border-gray-600 rounded px-4 py-2">
+              <div className="flex col-span-1">
+                <div
+                  className={`flex items-center justify-center w-full border border-gray-600 rounded px-4 py-2 ${
+                    matched ? "" : "opacity-50"
+                  }`}
+                >
                   <button
-                    className="text-lg font-bold text-white px-3 cursor-pointer"
+                    className={`text-lg font-bold text-white px-3 ${
+                      matched ? "cursor-pointer" : ""
+                    }`}
                     onClick={() => setCount((prev) => Math.max(1, prev - 1))}
+                    disabled={matched ? false : true}
                   >
                     -
                   </button>
@@ -189,16 +280,23 @@ const ProductPreviewModal = ({
                     disabled
                   />
                   <button
-                    className="text-lg font-bold text-white px-3 cursor-pointer"
-                    onClick={() => setCount((prev) => prev + 1)}
+                    className={`text-lg font-bold text-white px-3 ${
+                      matched ? "cursor-pointer" : ""
+                    }`}
+                    onClick={() => (count < selectedStock) ? setCount((prev) => prev + 1) : ""}
+                    disabled={matched ? false : true}
                   >
                     +
                   </button>
                 </div>
               </div>
 
+              <div className="min-w-[60px] px-2 py-2 rounded text-center bg-transparent text-white">
+                <span className="text-sm">คงเหลือ: {selectedStock ?? "-"}</span>
+              </div>
+
               {/* ปุ่ม Add to Cart */}
-              <div className="col-span-2">
+              <div className="col-span-1">
                 <button
                   className="w-full bg-gray-800 hover:bg-gray-700 text-white font-semibold py-3 px-4 rounded transition-colors duration-300 cursor-pointer"
                   onClick={() => addToCart(product, count)}

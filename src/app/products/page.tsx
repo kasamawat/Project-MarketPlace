@@ -6,7 +6,26 @@ import ProductListClient from "./ProductListClient";
 
 export default async function ProductListPage() {
   let products: Product[] = [];
-  products = await getAllProducts();
+
+  try {
+    console.log(`${process.env.NEXT_PUBLIC_API_URL}/public/products`,'`${process.env.NEXT_PUBLIC_API_URL}/products/public`');
+    
+    const res = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/public/products`,
+      {
+        method: "GET",
+        cache: "no-store", // เพื่อให้ดึงข้อมูลสดทุกครั้ง
+      }
+    );
+    if (!res.ok) throw new Error("Failed to fetch products");
+    products = await res.json();
+  } catch (error) {
+    // handle error หรือ log ได้
+    console.log(error);
+
+    products = [];
+  }
+
   if (products.length === 0) {
     notFound();
   }

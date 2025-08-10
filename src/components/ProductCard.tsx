@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import Image from "next/image";
 import { useState } from "react";
@@ -6,6 +6,7 @@ import ProductPreviewModal from "@/components/modals/ProductPreviewModal";
 // import { useCart } from "@/app/context/CartContext";
 import Link from "next/link";
 import { Product } from "@/types/product/product.types";
+import { getAllVariantPrices } from "@/lib/functionTools";
 
 const styles = {
   actionHidden: "opacity-0 transition-opacity duration-500",
@@ -18,6 +19,10 @@ export default function ProductCard({ product }: { product: Product }) {
   // const { addToCart } = useCart();
   const [onHover, setOnHover] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+
+  const prices = getAllVariantPrices(product.variants ?? []);
+  const minPrice = prices.length ? Math.min(...prices) : 0;
+  const maxPrice = prices.length ? Math.max(...prices) : 0;
 
   return (
     <>
@@ -32,7 +37,7 @@ export default function ProductCard({ product }: { product: Product }) {
             className="group rounded-lg overflow-hidden shadow hover:shadow-lg transition"
           >
             <Image
-              src={product.image ?? ""}
+              src={product.image ?? "/no-image.png"}
               alt={product.name}
               width={400}
               height={300}
@@ -83,7 +88,9 @@ export default function ProductCard({ product }: { product: Product }) {
           </p> */}
           <h2 className="text-white font-semibold text-lg">{product.name}</h2>
           <p className="text-green-400 mt-1 font-bold">
-            ฿{product.price.toLocaleString()}
+            {prices.length > 1
+              ? `฿ ${minPrice.toLocaleString()} - ${maxPrice.toLocaleString()}`
+              : `฿ ${minPrice.toLocaleString()}`}
           </p>
         </div>
       </div>

@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import Modal from "@/components/Modal";
-import ProductForm from "./productForm";
 import {
   ProductBase,
   ProductVariantBase,
@@ -12,7 +11,6 @@ import {
 // import { ProductCategory } from "@/types/product/enums/product-category.enum";
 // import { ProductType } from "@/types/product/enums/product-type.enum";
 import React from "react";
-import VariantForm from "./VariantForm";
 import VariantTable from "./VariantTable";
 import ConfirmModal from "@/components/ConfirmModal";
 import toast from "react-hot-toast";
@@ -41,6 +39,7 @@ export default function ProductList(): React.ReactElement {
       setLoading(true);
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/products`, {
         method: "GET",
+        cache: "no-store",
         credentials: "include", // <<--- ส่ง cookie token ด้วย
       });
       if (res.ok) {
@@ -218,7 +217,7 @@ export default function ProductList(): React.ReactElement {
   if (loading) return <div>Loading...</div>;
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
+    <div className="max-w-7xl mx-auto px-4 py-8">
       <div className="mb-4">
         <Link
           href={`/store/dashboard`}
@@ -230,12 +229,12 @@ export default function ProductList(): React.ReactElement {
 
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-semibold text-white">Product List</h1>
-        <button
-          className="inline-block px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 cursor-pointer"
-          onClick={() => setModalProduct({ type: "add" })}
+        <Link
+          href={"/store/products/create"}
+          className="inline-block px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 cursor-pointer"
         >
           +Add Product
-        </button>
+        </Link>
       </div>
 
       <div className="overflow-x-auto rounded-xl shadow">
@@ -252,6 +251,7 @@ export default function ProductList(): React.ReactElement {
                 Price (THB)
               </th>
               <th className="px-4 py-3 border border-gray-700 w-1/6">Stock</th>
+              <th className="px-4 py-3 border border-gray-700 w-1/6">Status</th>
               <th className="px-4 py-3 border border-gray-700 w-1/6">
                 Actions
               </th>
@@ -358,18 +358,19 @@ export default function ProductList(): React.ReactElement {
                         })
                       : ""}
                   </td>
+                  <td className="px-4 py-3 border border-gray-700 text-center">
+                    {p.status}
+                  </td>
                   <td
                     onClick={(e) => e.stopPropagation()}
                     className="px-4 py-3 border border-gray-700 text-center space-y-1"
                   >
-                    <button
-                      onClick={() =>
-                        setModalProduct({ type: "edit", product: p })
-                      }
+                    <Link
+                      href={`/store/products/${p._id}/edit`}
                       className="px-2 py-1 text-blue-600 hover:text-blue-700 hover:underline cursor-pointer"
                     >
                       Edit
-                    </button>
+                    </Link>
                     <button
                       onClick={() =>
                         setDeleteTarget({ type: "product", productId: p._id })
@@ -426,52 +427,6 @@ export default function ProductList(): React.ReactElement {
           </tbody>
         </table>
       </div>
-
-      {/* Modal Add/Edit */}
-      {modalProduct.type !== "none" && (
-        <Modal onClose={() => setModalProduct({ type: "none" })}>
-          {modalProduct.type === "add" && (
-            <>
-              <div className="mb-5 text-2xl font-bold">Add Product</div>
-              <ProductForm
-                mode="add"
-                onSuccess={handleAddSuccess}
-                onCancel={() => setModalProduct({ type: "none" })}
-              />
-            </>
-          )}
-          {modalProduct.type === "edit" && (
-            <>
-              <div className="mb-5 text-2xl font-bold">Edit Product</div>
-              <ProductForm
-                mode="edit"
-                product={modalProduct.product}
-                onSuccess={handleEditSuccess}
-                onCancel={() => setModalProduct({ type: "none" })}
-              />
-            </>
-          )}
-        </Modal>
-      )}
-
-      {/* Modal Set Variant */}
-      {modalVariant.type !== "none" && (
-        <Modal onClose={() => setModalVariant({ type: "none" })}>
-          {modalVariant.type === "set" && (
-            <>
-              <div className="mb-5 text-2xl font-bold">
-                Setting Variant : {modalVariant.id?.toString()}
-              </div>
-              <VariantForm
-                variant={modalVariant.variant}
-                productId={modalVariant.id?.toString()}
-                onSuccess={handleSetSuccess}
-                onCancel={() => setModalVariant({ type: "none" })}
-              />
-            </>
-          )}
-        </Modal>
-      )}
 
       {/* Modal แยก */}
       <ConfirmModal

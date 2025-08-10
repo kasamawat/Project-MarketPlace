@@ -40,7 +40,7 @@ const VariantTable: React.FC<VariantTableProps> = ({
             Price (THB)
           </th>
           <th className="px-4 py-1.5 border border-gray-700 w-1/6">Stock</th>
-          <th className="px-4 py-1.5 border border-gray-700 w-1/12">Actions</th>
+          {/* <th className="px-4 py-1.5 border border-gray-700 w-1/12">Actions</th> */}
         </tr>
       </thead>
       <tbody>
@@ -131,11 +131,10 @@ const VariantTable: React.FC<VariantTableProps> = ({
                     })
                   : ""}
               </td>
-              <td
+              {/* <td
                 className="px-4 py-3 border border-gray-700 text-center space-y-1"
                 onClick={(e) => e.stopPropagation()}
               >
-                {/* ปุ่ม action อื่นๆ */}
                 <button
                   className="px-2 py-1 text-cyan-600 hover:text-cyan-700 hover:underline cursor-pointer"
                   onClick={() => onSet(productId, v)}
@@ -151,7 +150,7 @@ const VariantTable: React.FC<VariantTableProps> = ({
                 >
                   Delete
                 </button>
-              </td>
+              </td> */}
             </tr>
             {/* Recursive render subVariant */}
             {v.variants &&
