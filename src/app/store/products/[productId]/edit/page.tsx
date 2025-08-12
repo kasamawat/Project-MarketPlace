@@ -49,7 +49,7 @@ export default async function EditProductPage({
         </Link>
       </div>
 
-      <h2 className="text-2xl font-bold mb-6">Edit Product</h2>
+      <h2 className="text-2xl font-bold mb-6">Edit Product #ID: {productId}</h2>
 
       <ProductEditor mode="edit" initialProduct={product} />
     </main>

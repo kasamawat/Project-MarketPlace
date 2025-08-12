@@ -6,9 +6,10 @@ import { Product } from "@/types/product/product.types";
 import Link from "next/link";
 import { FaRegStar, FaStar, FaStarHalfAlt } from "react-icons/fa";
 import { getAllVariantPrices, extractCombinations } from "@/lib/functionTools";
+import { ProductBase } from "@/types/product/base/product-base.types";
 
 type Props = {
-  product: Product;
+  product: ProductBase;
   onClose: () => void;
 };
 
@@ -19,7 +20,7 @@ const ProductPreviewModal = ({
   onClose,
 }: Props): React.ReactElement => {
   const { addToCart } = useCart();
-  // console.log(product, "product");
+  console.log(product, "product");
 
   const prices = getAllVariantPrices(product.variants ?? []);
   const minPrice = prices.length ? Math.min(...prices) : 0;
@@ -28,7 +29,6 @@ const ProductPreviewModal = ({
   const [selectedOptions, setSelectedOptions] = useState<
     Record<string, string>
   >({});
-  // console.log(selectedOptions, "selectedOptions");
 
   // สร้าง combinations ตอน render page/receive product
   const allCombinations = useMemo(
@@ -50,8 +50,6 @@ const ProductPreviewModal = ({
     [allCombinations]
   );
 
-  console.log(allFields, "allFields");
-
   const masterOptions: Record<string, string[]> = useMemo(() => {
     const opts: Record<string, string[]> = {};
     allFields.forEach((field) => {
@@ -61,8 +59,6 @@ const ProductPreviewModal = ({
     });
     return opts;
   }, [allCombinations, allFields]);
-
-  // console.log(masterOptions, "masterOptions");
 
   // ฟังก์ชัน filter ตัวเลือก option ตาม selection ปัจจุบัน
   function getAvailableOptionsForField(field: string) {
@@ -92,13 +88,8 @@ const ProductPreviewModal = ({
     );
   });
 
-  console.log(selectedOptions, "selectedOptions");
-
-  console.log(matched, "matched");
-
-  const selectedPrice = matched?.price ?? 0;
+  const selectedPrice = matched?.price;
   const selectedStock = matched?.stock ?? 0;
-  // const selectedPrice = lastSelectedVariant?.price;
 
   const [isVisible, setIsVisible] = useState(false);
   const [count, setCount] = useState(1);
@@ -143,7 +134,7 @@ const ProductPreviewModal = ({
         <div className="p-4 grid grid-cols-3 gap-4">
           <div className="col-span-1 sm:col-span-1 pl-2 pr-2">
             <Image
-              src={product.image ?? "/no-image.png"}
+              src={product?.image || "/no-image.png"}
               alt={product.name}
               width={400}
               height={300}
@@ -161,9 +152,6 @@ const ProductPreviewModal = ({
                   : prices.length > 1
                   ? `฿ ${minPrice.toLocaleString()} - ${maxPrice.toLocaleString()}`
                   : `฿ ${minPrice.toLocaleString()}`}
-                {/* {prices.length > 1
-                  ? `฿ ${minPrice.toLocaleString()} - ${maxPrice.toLocaleString()}`
-                  : `฿ ${minPrice.toLocaleString()}`} */}
               </span>
             </div>
             <div className="mb-2">
@@ -193,10 +181,7 @@ const ProductPreviewModal = ({
             </div>
             <div className="pb-8 mt-4 mb-4 border-b-1 border-solid border-gray-600">
               <span className="text-white text-sm">
-                Lorem ipsum dolor sit amet consectetur adipisicing elit. Minus
-                ut asperiores rem consectetur quae suscipit sint dicta excepturi
-                totam ipsum, voluptate rerum cumque iure veritatis illum sequi
-                commodi ullam enim.
+                {product.description}
               </span>
             </div>
             {allFields.map((field) => {
@@ -220,10 +205,14 @@ const ProductPreviewModal = ({
                           ${
                             selectedOptions[field] === opt
                               ? "bg-blue-600 text-white border-blue-700"
-                              : (!isOptionAvailable(field, opt) ? "" : "border-gray-400 text-white hover:bg-gray-700")
+                              : !isOptionAvailable(field, opt)
+                              ? ""
+                              : "border-gray-400 text-white hover:bg-gray-700"
                           }
                           ${
-                            !isOptionAvailable(field, opt) ? "opacity-50" : "cursor-pointer"
+                            !isOptionAvailable(field, opt)
+                              ? "opacity-50"
+                              : "cursor-pointer"
                           }
                         `}
                         onClick={() => {
@@ -283,7 +272,9 @@ const ProductPreviewModal = ({
                     className={`text-lg font-bold text-white px-3 ${
                       matched ? "cursor-pointer" : ""
                     }`}
-                    onClick={() => (count < selectedStock) ? setCount((prev) => prev + 1) : ""}
+                    onClick={() =>
+                      count < selectedStock ? setCount((prev) => prev + 1) : ""
+                    }
                     disabled={matched ? false : true}
                   >
                     +
@@ -298,8 +289,11 @@ const ProductPreviewModal = ({
               {/* ปุ่ม Add to Cart */}
               <div className="col-span-1">
                 <button
-                  className="w-full bg-gray-800 hover:bg-gray-700 text-white font-semibold py-3 px-4 rounded transition-colors duration-300 cursor-pointer"
+                  className={`w-full bg-gray-800 text-white font-semibold py-3 px-4 rounded transition-colors duration-300 ${
+                    selectedPrice !== undefined ? "cursor-pointer hover:bg-gray-700" : "opacity-50"
+                  }`}
                   onClick={() => addToCart(product, count)}
+                  disabled={selectedPrice !== undefined ? false : true}
                 >
                   Add to Cart
                 </button>

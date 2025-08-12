@@ -1,13 +1,13 @@
 // components/store/StoreHeader.tsx
-import { Store } from "@/types/store.types";
+import { StorePubilc } from "@/types/store.types";
 import Image from "next/image";
 
-export default function StoreHeader({ store }: { store: Store }) {
+export default function StoreHeader({ store }: { store: StorePubilc }) {
   return (
     <div className="grid grid-cols-7 gap-4 border-b pb-4 mb-4">
       <div className="col-span-1 flex flex-col items-center text-md font-medium">
         <Image
-          src={store.bannerUrl ?? "/default-banner.png"}
+          src={store.coverUrl ?? "/default-banner.png"}
           alt={store.name}
           width={100}
           height={100}

@@ -1,11 +1,10 @@
 import Breadcrumbs from "@/components/Breadcrumbs";
-import { Product } from "@/types/product/product.types";
-import { getAllProducts } from "@/lib/products";
 import { notFound } from "next/navigation";
 import ProductListClient from "./ProductListClient";
+import { ProductBase } from "@/types/product/base/product-base.types";
 
 export default async function ProductListPage() {
-  let products: Product[] = [];
+  let products: ProductBase[] = [];
 
   try {
     console.log(`${process.env.NEXT_PUBLIC_API_URL}/public/products`,'`${process.env.NEXT_PUBLIC_API_URL}/products/public`');

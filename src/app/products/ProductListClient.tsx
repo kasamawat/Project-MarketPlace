@@ -7,9 +7,10 @@ import { Product } from "@/types/product/product.types";
 import FilterSidebar from "@/components/FilterSidebar";
 import { ProductCategory } from "@/types/product/enums/product-category.enum";
 import { ProductType } from "@/types/product/enums/product-type.enum";
+import { ProductBase } from "@/types/product/base/product-base.types";
 
 type Props = {
-  products: Product[];
+  products: ProductBase[];
 };
 
 const allFilters = {
