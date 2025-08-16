@@ -2,8 +2,11 @@
 
 import { notFound } from "next/navigation";
 import ClientStoreDetail from "./ClientStoreDetail";
-import { StorePubilc } from "@/types/store.types";
-import { ProductBase } from "@/types/product/base/product-base.types";
+import { StorePubilc } from "@/types/store/stores.types";
+import {
+  PublicProduct,
+  PublicProductListResponse,
+} from "@/types/product/products.types";
 
 type Props = {
   params: { storeId: string };
@@ -32,7 +35,7 @@ async function fetchStore(id: string): Promise<StorePubilc> {
   return res.json();
 }
 
-async function fetchProductsByStore(id: string): Promise<ProductBase[]> {
+async function fetchProductsByStore(id: string): Promise<PublicProduct[]> {
   const res = await fetch(
     `${process.env.NEXT_PUBLIC_API_URL}/public/store/${id}/products`,
     {
@@ -52,7 +55,9 @@ async function fetchProductsByStore(id: string): Promise<ProductBase[]> {
     throw new Error(`Failed to fetch product: ${res.status} ${res.statusText}`);
   }
 
-  return res.json();
+  const data: PublicProductListResponse = await res.json();
+  
+  return data.items;
 }
 
 export default async function StorePage({ params }: Props) {
@@ -61,10 +66,14 @@ export default async function StorePage({ params }: Props) {
 
   const store = await fetchStore(storeId);
 
+  console.log(store, "store");
+
   if (!store) return notFound();
 
   // const products = await getProductsByStore(store._id);
   const products = await fetchProductsByStore(storeId);
+
+  console.log(products, "products");
 
   if (!products) return notFound();
 

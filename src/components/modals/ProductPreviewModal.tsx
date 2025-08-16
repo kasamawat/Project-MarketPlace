@@ -1,118 +1,144 @@
 // components/ProductPreviewModal.tsx
+"use client";
+
 import React, { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
-import { useCart } from "@/app/context/CartContext";
-import { Product } from "@/types/product/product.types";
 import Link from "next/link";
 import { FaRegStar, FaStar, FaStarHalfAlt } from "react-icons/fa";
-import { getAllVariantPrices, extractCombinations } from "@/lib/functionTools";
-import { ProductBase } from "@/types/product/base/product-base.types";
+import { useCart } from "@/app/context/CartContext";
+import type { PublicProduct, SkuPublic } from "@/types/product/products.types";
 
 type Props = {
-  product: ProductBase;
+  product: PublicProduct; // ควรมี: _id, name, image?, priceFrom?, priceTo?, skuCount
   onClose: () => void;
 };
 
-const mockStart = 4.5;
+const mockStar = 4.5;
+const fmt = (n?: number) =>
+  typeof n === "number"
+    ? n.toLocaleString("th-TH", { minimumFractionDigits: 0 })
+    : "—";
 
-const ProductPreviewModal = ({
-  product,
-  onClose,
-}: Props): React.ReactElement => {
+export default function ProductPreviewModal({ product, onClose }: Props) {
   const { addToCart } = useCart();
-  console.log(product, "product");
 
-  const prices = getAllVariantPrices(product.variants ?? []);
-  const minPrice = prices.length ? Math.min(...prices) : 0;
-  const maxPrice = prices.length ? Math.max(...prices) : 0;
-
-  const [selectedOptions, setSelectedOptions] = useState<
-    Record<string, string>
-  >({});
-
-  // สร้าง combinations ตอน render page/receive product
-  const allCombinations = useMemo(
-    () => extractCombinations(product.variants ?? []),
-    [product]
-  );
-  console.log(allCombinations, "allCombinations");
-
-  // หาทุก field จริง (Color/Size/Sex ...) อัตโนมัติ
-  const allFields = useMemo(
-    () =>
-      Array.from(
-        new Set(
-          allCombinations.flatMap((c) =>
-            Object.keys(c).filter((k) => !["_id", "price", "stock"].includes(k))
-          )
-        )
-      ),
-    [allCombinations]
-  );
-
-  const masterOptions: Record<string, string[]> = useMemo(() => {
-    const opts: Record<string, string[]> = {};
-    allFields.forEach((field) => {
-      opts[field] = Array.from(
-        new Set(allCombinations.map((c) => c[field]))
-      ).filter(Boolean);
-    });
-    return opts;
-  }, [allCombinations, allFields]);
-
-  // ฟังก์ชัน filter ตัวเลือก option ตาม selection ปัจจุบัน
-  function getAvailableOptionsForField(field: string) {
-    const available = new Set(allCombinations.map((c) => c[field]));
-    return (masterOptions[field] ?? []).filter((opt) => available.has(opt));
-  }
-
-  function isOptionAvailable(currentField: string, opt: string) {
-    return allCombinations.some(
-      (comb) =>
-        Object.entries(selectedOptions).every(([k, v]) =>
-          k === currentField ? true : comb[k] === v
-        ) && comb[currentField] === opt
-    );
-  }
-
-  // หาคู่ selected ปัจจุบัน (เอา price/stock)
-  const matched = allCombinations.find((comb) => {
-    // filter เอาแต่ field จริง (ไม่เอา _id, price, stock)
-    const fields = Object.keys(comb).filter(
-      (k) => !["_id", "price", "stock"].includes(k)
-    );
-    // ต้องเลือกครบทุก field ของ combination นั้น
-    return (
-      fields.every((f) => selectedOptions[f]) &&
-      fields.every((f) => selectedOptions[f] === comb[f])
-    );
-  });
-
-  const selectedPrice = matched?.price;
-  const selectedStock = matched?.stock ?? 0;
-
+  // ----- local states -----
   const [isVisible, setIsVisible] = useState(false);
   const [count, setCount] = useState(1);
   const [isWishlisted, setIsWishlisted] = useState(false);
 
+  // โหลด SKUs (public)
+  const [skus, setSkus] = useState<SkuPublic[]>([]);
+  const [loadingSkus, setLoadingSkus] = useState(false);
+  const [errorSkus, setErrorSkus] = useState<string | null>(null);
+
+  // ตัวเลือกที่ผู้ใช้เลือก
+  const [selectedOptions, setSelectedOptions] = useState<
+    Record<string, string>
+  >({});
+
+  // เปิด animation + รีเซ็ตทุกครั้งที่เปิด modal/เปลี่ยน product
   useEffect(() => {
-    const timeout = setTimeout(() => {
-      setIsVisible(true);
-    }, 50);
+    setIsVisible(true);
+    setCount(1);
+    setIsWishlisted(false);
+    setSelectedOptions({});
+    setSkus([]);
+    setErrorSkus(null);
+    setLoadingSkus(true);
 
-    return () => clearTimeout(timeout);
-  }, []);
+    (async () => {
+      try {
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/public/products/${product._id}/skus`,
+          { cache: "no-store" }
+        );
+        if (!res.ok) throw new Error(await res.text());
+        const data: SkuPublic[] = await res.json();
+        setSkus((data || []).filter((s) => s.purchasable !== false));
+      } catch (e) {
+        setErrorSkus("โหลดตัวเลือกไม่สำเร็จ");
+      } finally {
+        setLoadingSkus(false);
+      }
+    })();
+  }, [product._id]);
 
+  // ปิด modal แบบนุ่มนวล
   const handleClose = () => {
     setIsVisible(false);
-    setTimeout(() => {
-      onClose();
-    }, 200);
+    setTimeout(() => onClose(), 200);
   };
+
+  // ====== จาก SKUs -> fields/options ======
+  // fields = ชื่อ attribute ทั้งหมด (Color/Size/…)
+  const fields = useMemo(() => {
+    const set = new Set<string>();
+    for (const s of skus) {
+      Object.keys(s.attributes || {}).forEach((k) => set.add(k));
+    }
+    return Array.from(set);
+  }, [skus]);
+
+  // master options map: field -> string[]
+  const optionsMap = useMemo(() => {
+    const map: Record<string, string[]> = {};
+    for (const f of fields) {
+      const vals = new Set<string>();
+      for (const s of skus) {
+        const v = s.attributes?.[f];
+        if (v) vals.add(v);
+      }
+      map[f] = Array.from(vals);
+    }
+    return map;
+  }, [fields, skus]);
+
+  // helper: ตรวจว่า option ใช้ได้ภายใต้ selection ปัจจุบัน
+  const isOptionAvailable = (field: string, opt: string) => {
+    return skus.some((sku) => {
+      // ต้องตรงกับ options ที่เลือกไว้ทุกตัว (ยกเว้น field ปัจจุบัน)
+      const okOtherFields = Object.entries(selectedOptions).every(([k, v]) => {
+        if (k === field) return true;
+        return (sku.attributes?.[k] ?? "") === v;
+      });
+      if (!okOtherFields) return false;
+      // field ปัจจุบันต้องมีค่า opt
+      return (sku.attributes?.[field] ?? "") === opt;
+    });
+  };
+
+  // SKU ที่ match กับ selection (ถ้าเลือกครบทุก field)
+  const matchedSku = useMemo(() => {
+    if (!fields.length) {
+      // ไม่มี fields (base SKU) -> ถ้ามี 1 ตัวก็ใช้ตัวนั้น
+      return skus.length ? skus[0] : undefined;
+    }
+    // ต้องเลือกครบทุก field
+    const allChosen = fields.every((f) => !!selectedOptions[f]);
+    if (!allChosen) return undefined;
+
+    return skus.find((sku) =>
+      fields.every((f) => (sku.attributes?.[f] ?? "") === selectedOptions[f])
+    );
+  }, [fields, selectedOptions, skus]);
+
+  const selectedPrice = matchedSku?.price ?? undefined;
+  const selectedAvailable = matchedSku?.available; // อาจ undefined ถ้า BE ไม่ส่ง
+
+  // ป้ายราคา: เลือกครบ -> ราคา SKU, ไม่ครบ -> ช่วงจาก product
+  const priceLabel =
+    selectedPrice != null
+      ? `฿ ${fmt(selectedPrice)}`
+      : product.priceFrom != null &&
+        product.priceTo != null &&
+        product.priceTo !== product.priceFrom
+      ? `฿ ${fmt(product.priceFrom)} - ${fmt(product.priceTo)}`
+      : `฿ ${fmt(product.priceFrom ?? product.priceTo)}`;
 
   return (
     <div
-      className={`fixed inset-0 z-50 bg-black/50 bg-opacity-50 flex items-center justify-center transition-opacity duration-200 ${
+      className={`fixed inset-0 z-50 bg-black/50 flex items-center justify-center transition-opacity duration-200 ${
         isVisible ? "opacity-100" : "opacity-0"
       }`}
       onClick={handleClose}
@@ -123,204 +149,230 @@ const ProductPreviewModal = ({
         }`}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="p-2 flex justify-end border-b-1 border-solid border-gray-600">
+        <div className="p-2 flex justify-end border-b border-gray-700">
           <button
-            className={`text-gray-500 hover:text-gray-700 text-2xl cursor-pointer`}
+            className="text-gray-400 hover:text-white text-2xl cursor-pointer"
             onClick={handleClose}
           >
             &times;
           </button>
         </div>
+
         <div className="p-4 grid grid-cols-3 gap-4">
-          <div className="col-span-1 sm:col-span-1 pl-2 pr-2">
+          {/* รูป */}
+          <div className="col-span-1 w-full pl-6 pr-6">
             <Image
-              src={product?.image || "/no-image.png"}
+              src={product.image || "/no-image.png"}
               alt={product.name}
               width={400}
               height={300}
-              className="w-full h-96 object-cover rounded border-1 border-solid border-gray-600"
+              className="w-full h-96 object-cover rounded border border-gray-700"
             />
           </div>
-          <div className="col-span-2 sm:col-span-2 pl-2 pr-2">
+
+          {/* เนื้อหา */}
+          <div className="col-span-2 w-full pl-6 pr-6">
             <h2 className="text-xl font-bold mb-2 text-white">
               {product.name}
             </h2>
+
             <div className="mb-2">
-              <span className="text-green-600 font-semibold text-lg mt-4">
-                {selectedPrice !== undefined
-                  ? `฿ ${selectedPrice.toLocaleString()}`
-                  : prices.length > 1
-                  ? `฿ ${minPrice.toLocaleString()} - ${maxPrice.toLocaleString()}`
-                  : `฿ ${minPrice.toLocaleString()}`}
+              <span className="text-green-400 font-semibold text-lg mt-4">
+                {priceLabel}
               </span>
             </div>
-            <div className="mb-2">
-              <h3 className="text-md font-bold text-sm">
-                Sold By:{" "}
-                <Link
-                  href={`/stores/${product.store._id}`}
-                  className="text-blue-600 hover:underline text-sm"
-                >
-                  {product.store.name}
-                </Link>
-              </h3>
-            </div>
+
+            {/* ร้าน (ถ้ามีใน public DTO) */}
+            {"store" in product && product.store?.name ? (
+              <div className="mb-2">
+                <h3 className="text-sm font-bold text-white/80">
+                  Sold By:{" "}
+                  <Link
+                    href={`/stores/${
+                      product.store?.slug ?? product.store?._id ?? ""
+                    }`}
+                    className="text-indigo-400 hover:underline"
+                  >
+                    {product.store?.name}
+                  </Link>
+                </h3>
+              </div>
+            ) : null}
+
             <div className="flex items-center text-yellow-400 text-lg mt-4">
               {[1, 2, 3, 4, 5].map((i) =>
-                i <= Math.floor(mockStart) ? (
+                i <= Math.floor(mockStar) ? (
                   <FaStar key={i} />
-                ) : i - 0.5 === mockStart ? (
+                ) : i - 0.5 === mockStar ? (
                   <FaStarHalfAlt key={i} />
                 ) : (
                   <FaRegStar key={i} />
                 )
               )}
-              <span className="ml-2 text-lg text-gray-400">
-                ({mockStart} / 5)
+              <span className="ml-2 text-gray-400 text-sm">
+                ({mockStar} / 5)
               </span>
             </div>
-            <div className="pb-8 mt-4 mb-4 border-b-1 border-solid border-gray-600">
-              <span className="text-white text-sm">
-                {product.description}
-              </span>
+
+            <div className="flex items-center text-md mt-4">
+              {product.description || "no description"}
             </div>
-            {allFields.map((field) => {
-              const options =
-                getAvailableOptionsForField(field).filter(Boolean);
-              console.log(options, "options");
 
-              return (
-                <div key={field} className="mb-2">
-                  {/* {options.length === 0 ? null : (
-                    <>
-                    </>
-                  )} */}
-                  <span className="block text-md text-white pb-2">{field}</span>
-                  <div className="flex flex-wrap gap-2">
-                    {options.map((opt) => (
-                      <button
-                        key={opt}
-                        disabled={!isOptionAvailable(field, opt)}
-                        className={`px-3 py-1 rounded border text-sm 
-                          ${
-                            selectedOptions[field] === opt
-                              ? "bg-blue-600 text-white border-blue-700"
-                              : !isOptionAvailable(field, opt)
-                              ? ""
-                              : "border-gray-400 text-white hover:bg-gray-700"
-                          }
-                          ${
-                            !isOptionAvailable(field, opt)
-                              ? "opacity-50"
-                              : "cursor-pointer"
-                          }
-                        `}
-                        onClick={() => {
-                          setSelectedOptions((prev) => {
-                            // toggle: ถ้าเลือกอันเดิม → ลบ key ทิ้งเลย
-                            if (prev[field] === opt) {
-                              // ลบ field ออกจาก object
-                              const updated = { ...prev };
-                              delete updated[field];
-                              return updated;
-                            }
-                            // เลือกใหม่/เปลี่ยน
-                            return {
-                              ...prev,
-                              [field]: opt,
-                            };
-                          });
+            <hr className="flex items-center text-md mt-4 text-gray-700" />
 
-                          if (matched) {
-                            setCount(1);
-                          }
-                        }}
-                      >
-                        {opt}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
+            {/* ตัวเลือก (ถ้ามี fields) */}
+            <div className="mt-4 space-y-3">
+              {loadingSkus && (
+                <div className="text-sm text-gray-400">กำลังโหลดตัวเลือก…</div>
+              )}
+              {errorSkus && (
+                <div className="text-sm text-red-400">{errorSkus}</div>
+              )}
 
+              {!loadingSkus &&
+                !errorSkus &&
+                fields.map((field) => {
+                  const opts = optionsMap[field] ?? [];
+                  if (!opts.length) return null;
+                  return (
+                    <div key={field}>
+                      <span className="block text-white text-sm mb-2">
+                        {field}
+                      </span>
+                      <div className="flex flex-wrap gap-2">
+                        {opts.map((opt) => {
+                          const available = isOptionAvailable(field, opt);
+                          const active = selectedOptions[field] === opt;
+                          return (
+                            <button
+                              key={opt}
+                              disabled={!available}
+                              className={`px-3 py-1 rounded border text-sm cursor-pointer ${
+                                active
+                                  ? "bg-blue-600 text-white border-blue-700"
+                                  : available
+                                  ? "border-gray-600 text-white hover:bg-gray-800"
+                                  : "border-gray-700 text-gray-500 opacity-50"
+                              }`}
+                              onClick={() => {
+                                setSelectedOptions((prev) => {
+                                  // toggle: ถ้าเลือกอันเดิม → ลบออก
+                                  if (prev[field] === opt) {
+                                    const u = { ...prev };
+                                    delete u[field];
+                                    return u;
+                                  }
+                                  return { ...prev, [field]: opt };
+                                });
+                                setCount(1);
+                              }}
+                            >
+                              {opt}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+
+            {/* จำนวน / สต๊อก / ปุ่ม */}
             <div className="grid grid-cols-4 gap-4 mt-6 items-center">
-              {/* กล่องจำนวน */}
+              {/* จำนวน */}
               <div className="flex col-span-1">
                 <div
                   className={`flex items-center justify-center w-full border border-gray-600 rounded px-4 py-2 ${
-                    matched ? "" : "opacity-50"
+                    matchedSku ? "" : "opacity-50"
                   }`}
                 >
                   <button
                     className={`text-lg font-bold text-white px-3 ${
-                      matched ? "cursor-pointer" : ""
+                      !matchedSku ? "" : "cursor-pointer"
                     }`}
                     onClick={() => setCount((prev) => Math.max(1, prev - 1))}
-                    disabled={matched ? false : true}
+                    disabled={!matchedSku}
                   >
                     -
                   </button>
                   <input
                     type="text"
                     value={count}
-                    onChange={(e) => setCount(Number(e.target.value))}
+                    readOnly
                     className="w-10 text-center bg-transparent text-white outline-none mx-2"
-                    disabled
                   />
                   <button
                     className={`text-lg font-bold text-white px-3 ${
-                      matched ? "cursor-pointer" : ""
+                      matchedSku ? "cursor-pointer" : ""
                     }`}
                     onClick={() =>
-                      count < selectedStock ? setCount((prev) => prev + 1) : ""
+                      setCount((prev) =>
+                        selectedAvailable != null
+                          ? Math.min(prev + 1, Math.max(1, selectedAvailable))
+                          : prev + 1
+                      )
                     }
-                    disabled={matched ? false : true}
+                    disabled={!matchedSku}
                   >
                     +
                   </button>
                 </div>
               </div>
 
-              <div className="min-w-[60px] px-2 py-2 rounded text-center bg-transparent text-white">
-                <span className="text-sm">คงเหลือ: {selectedStock ?? "-"}</span>
+              {/* คงเหลือ */}
+              <div className="min-w-[60px] px-2 py-2 rounded text-center text-white">
+                <span className="text-sm">
+                  คงเหลือ: {selectedAvailable != null ? selectedAvailable : "-"}
+                </span>
               </div>
 
-              {/* ปุ่ม Add to Cart */}
+              {/* Add to Cart */}
               <div className="col-span-1">
                 <button
                   className={`w-full bg-gray-800 text-white font-semibold py-3 px-4 rounded transition-colors duration-300 ${
-                    selectedPrice !== undefined ? "cursor-pointer hover:bg-gray-700" : "opacity-50"
+                    matchedSku
+                      ? "hover:bg-gray-700 cursor-pointer"
+                      : "opacity-50"
                   }`}
-                  onClick={() => addToCart(product, count)}
-                  disabled={selectedPrice !== undefined ? false : true}
+                  disabled={!matchedSku}
+                  onClick={() => {
+                    if (!matchedSku) return;
+                    // ปรับตาม signature ของ useCart ของคุณ
+                    // ตัวอย่าง: addToCart({ productId: product._id, skuId: matchedSku._id, qty: count })
+                    addToCart(product, count);
+                  }}
                 >
                   Add to Cart
                 </button>
               </div>
 
-              {/* ปุ่ม Buy Now */}
+              {/* Wishlist */}
               <div className="col-span-1">
                 <button
-                  className={`w-full font-semibold py-3 px-4 rounded transition-colors duration-300 ${
+                  className={`w-full font-semibold py-3 px-4 rounded transition-colors duration-300 cursor-pointer ${
                     isWishlisted
                       ? "bg-red-600 hover:bg-red-500 text-white"
                       : "bg-gray-800 hover:bg-gray-700 text-white"
                   }`}
-                  onClick={() => {
-                    setIsWishlisted((prev) => !prev);
-                    console.log(count);
-                  }}
+                  onClick={() => setIsWishlisted((prev) => !prev)}
                 >
                   {isWishlisted ? "❤️" : "🤍"}
                 </button>
               </div>
             </div>
+
+            {/* ไปหน้ารายละเอียด */}
+            {/* <div className="mt-6">
+              <Link
+                className="text-indigo-400 hover:underline"
+                href={`/products/${product._id}`}
+              >
+                ดูรายละเอียดสินค้า →
+              </Link>
+            </div> */}
           </div>
         </div>
       </div>
     </div>
   );
-};
-
-export default ProductPreviewModal;
+}

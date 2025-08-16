@@ -1,7 +1,7 @@
 import notFound from "./not-found";
 import ClientProductDetail from "./ClientProductDetail";
 import Breadcrumbs from "@/components/Breadcrumbs";
-import { ProductBase } from "@/types/product/base/product-base.types";
+import { PublicProduct, SkuPublic } from "@/types/product/products.types";
 
 type Props = {
   params: {
@@ -9,7 +9,7 @@ type Props = {
   };
 };
 
-async function fetchProduct(id: string): Promise<ProductBase> {
+async function fetchProduct(id: string): Promise<PublicProduct> {
   const res = await fetch(
     `${process.env.NEXT_PUBLIC_API_URL}/public/products/${id}`,
     {
@@ -31,12 +31,27 @@ async function fetchProduct(id: string): Promise<ProductBase> {
   return res.json();
 }
 
+async function fetchSkusByProduct(id: string): Promise<SkuPublic[]> {
+  const res = await fetch(
+    `${process.env.NEXT_PUBLIC_API_URL}/public/products/${id}/skus`,
+    { cache: "no-store" }
+  );
+  if (!res.ok) throw new Error(await res.text());
+
+  return res.json();
+}
+
 // Server Component
 export default async function ProductDetailPage({ params }: Props) {
   const { id } = await params;
   console.log(id, "id");
 
-  const product = await fetchProduct(id);
+  const product: PublicProduct = await fetchProduct(id);
+
+  const skus: SkuPublic[] = await fetchSkusByProduct(id);
+
+  console.log(product, "product");
+  console.log(skus, "skus");
 
   if (!product) return notFound(); // ✅ ใส่ return
 
@@ -55,7 +70,7 @@ export default async function ProductDetailPage({ params }: Props) {
           ]}
         />
       </div>
-      <ClientProductDetail product={product} />
+      <ClientProductDetail product={product} skus={skus} />
     </div>
   );
 }

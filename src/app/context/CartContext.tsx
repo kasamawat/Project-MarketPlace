@@ -2,6 +2,7 @@
 
 import { ProductBase } from "@/types/product/base/product-base.types";
 import { Product } from "@/types/product/product.types";
+import { PublicProduct } from "@/types/product/products.types";
 import {
   createContext,
   useContext,
@@ -11,11 +12,11 @@ import {
   use,
 } from "react";
 
-type CartItem = ProductBase & { quantity: number };
+type CartItem = PublicProduct & { quantity: number };
 
 type CartContextType = {
   cartItems: CartItem[];
-  addToCart: (product: ProductBase, quantity?: number) => void;
+  addToCart: (product: PublicProduct, quantity?: number) => void;
   removeFromCart: (productId: string | number) => void;
   clearCart: () => void;
 };
@@ -38,7 +39,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     localStorage.setItem("cartItems", JSON.stringify(cartItems));
   }, [cartItems]);
 
-  const addToCart = (product: ProductBase, quantity = 1) => {
+  const addToCart = (product: PublicProduct, quantity = 1) => {
     console.log(product,'product');
     
     setCartItems((prevCart) => {

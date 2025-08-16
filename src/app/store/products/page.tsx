@@ -1,226 +1,210 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import Modal from "@/components/Modal";
-import {
-  ProductBase,
-  ProductVariantBase,
-} from "@/types/product/base/product-base.types";
-// import { ProductCategory } from "@/types/product/enums/product-category.enum";
-// import { ProductType } from "@/types/product/enums/product-type.enum";
-import React from "react";
-import VariantTable from "./VariantTable";
-import ConfirmModal from "@/components/ConfirmModal";
 import toast from "react-hot-toast";
-import { removeVariantInTree } from "@/lib/functionTools";
-
-type ModalProductState =
-  | { type: "none" }
-  | { type: "add" }
-  | { type: "edit"; product: ProductBase };
-type ModalVariantState =
-  | { type: "none" }
-  | { type: "set"; id: string | number; variant: ProductVariantBase };
+import { ProductListItem, SkuRow } from "@/types/product/products.types";
+import {
+  attrsToText,
+  fmtPrice,
+  priceSummaryFor,
+} from "@/lib/helpers/productList";
+import AdjustStockModal from "@/components/inventory/AdjustStockModal";
 
 type DeleteTarget =
-  | { type: "product"; productId: string | number }
-  | { type: "variant"; productId: string | number; variantId: string | number };
+  | { type: "product"; productId: string }
+  | { type: "sku"; productId: string; skuId: string };
 
 export default function ProductList(): React.ReactElement {
-  const [products, setProducts] = useState<ProductBase[]>([]);
+  const [products, setProducts] = useState<ProductListItem[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
+  // inventory
+  const [adjustOpen, setAdjustOpen] = useState(false);
+  const [target, setTarget] = useState<{
+    productId: string;
+    sku: SkuRow;
+  } | null>(null);
 
-  useEffect(() => {
-    const fetchProducts = async () => {
-      setLoading(true);
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/products`, {
-        method: "GET",
-        cache: "no-store",
-        credentials: "include", // <<--- ส่ง cookie token ด้วย
+  const openAdjust = (productId: string, sku: SkuRow) => {
+    setTarget({ productId, sku });
+    setAdjustOpen(true);
+  };
+
+  async function adjustStock(delta: number, reason: string) {
+    if (!target) return;
+    const { productId, sku } = target;
+
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/inventory/products/${productId}/skus/${sku._id}/adjust`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ delta, reason }),
+        }
+      );
+      if (!res.ok) throw new Error(await res.text());
+
+      const result: { onHand: number; reserved: number; available: number } =
+        await res.json();
+
+      // อัปเดต cache ทันที
+      setSkuCache((prev) => {
+        const list = prev[productId] ?? [];
+        const next = list.map((s) =>
+          s._id === sku._id ? { ...s, ...result } : s
+        );
+        return { ...prev, [productId]: next };
       });
-      if (res.ok) {
-        const data: ProductBase[] = await res.json();
-        setProducts(data); // <<--- เซ็ตข้อมูลที่ได้
-      } else {
-        // handle error ตามต้องการ
-        setProducts([]);
-      }
-      setLoading(false);
-    };
 
-    fetchProducts();
+      toast.success("Stock adjusted");
+    } catch (e) {
+      toast.error("Adjust failed");
+    } finally {
+      setAdjustOpen(false);
+      setTarget(null);
+    }
+  }
+
+  // กาง/พับ
+  const [openIds, setOpenIds] = useState<Set<string>>(new Set());
+  const toggleRow = (id: string) =>
+    setOpenIds((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+
+  // แคช SKUs ต่อ productId
+  const [skuCache, setSkuCache] = useState<Record<string, SkuRow[]>>({});
+
+  // ลบ
+  const [deleting, setDeleting] = useState<DeleteTarget | null>(null);
+
+  // โหลด products ของร้าน (อิง JWT)
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        setLoading(true);
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/products`, {
+          method: "GET",
+          cache: "no-store",
+          credentials: "include",
+        });
+        if (!res.ok) throw new Error();
+        const data: ProductListItem[] = await res.json();
+
+        if (cancelled) return;
+        setProducts(data);
+
+        // 🔥 พรีเฟ็ตช์ SKUs หลังจากตั้ง products แล้ว
+        // ใช้ skuCache ปัจจุบันเป็นพื้นฐานเพื่อกันโหลดซ้ำ
+        await prefetchSkusForList(data, skuCache);
+      } catch {
+        // setProducts([]);
+        if (!cancelled) setProducts([]);
+      } finally {
+        // setLoading(false);
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  const [modalProduct, setModalProduct] = useState<ModalProductState>({
-    type: "none",
-  });
-  const [modalVariant, setModalVariant] = useState<ModalVariantState>({
-    type: "none",
-  });
+  // โหลด SKUs เมื่อกางครั้งแรก
+  const prefetchSkusForList = async (
+    items: ProductListItem[],
+    currentCache: Record<string, SkuRow[]>
+  ) => {
+    const ids = items.map((p) => p._id).filter((id) => !currentCache[id]); // ข้ามตัวที่เคยโหลดแล้ว
 
-  const [openVariantIds, setOpenVariantIds] = useState<(string | number)[]>([]);
-  // const [openVariantId, setOpenVariantId] = useState<string | number | null>(
-  //   null
-  // );
+    if (!ids.length) return;
 
-  // สำหรับเปิดหลายตัวพร้อมกัน (multiple open)
-  const toggleVariant = (id: string | number) => {
-    setOpenVariantIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    // (ถ้าลิสต์ยาวมาก แนะนำจำกัด concurrency; ตัวอย่างนี้ยิงพร้อมกันทั้งหมด)
+    const results = await Promise.allSettled(
+      ids.map((id) =>
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/products/${id}/skus`, {
+          credentials: "include",
+        })
+          .then((r) => (r.ok ? r.json() : Promise.reject(r.statusText)))
+          .then((skus: SkuRow[]) => ({ id, skus }))
+      )
     );
-  };
-  // ถ้าต้องการเปิดทีละตัว (single open)
-  // const toggleVariantRowSingle = (id: string | number) => {
-  //   setOpenVariantId((prev) => (prev === id ? null : id));
-  // };
 
-  // ========================== Product ==========================
-  // เพิ่มสินค้าใหม่เข้า list
-  const handleAddSuccess = (product: ProductBase) => {
-    setProducts((prev) => [...prev, product]);
-    setModalProduct({ type: "none" });
-  };
+    console.log(results, "results");
 
-  // อัปเดตสินค้าใน list หลัง edit สำเร็จ
-  const handleEditSuccess = (updated: ProductBase) => {
-    console.log(updated, "updated");
-
-    setProducts((prev) =>
-      prev.map((p) => (p._id === updated._id ? updated : p))
-    );
-    setModalProduct({ type: "none" });
-  };
-  // =============================================================
-
-  const updateVariantTree = (
-    variants: ProductVariantBase[] = [],
-    variantToUpdate: ProductVariantBase
-  ): ProductVariantBase[] => {
-    return variants.map((v) => {
-      if (v._id === variantToUpdate._id) {
-        // เจอ variant ที่ id ตรงกัน → อัปเดต
-        return { ...variantToUpdate };
+    // รวมผลที่สำเร็จ แล้วอัปเดต cache ครั้งเดียว
+    setSkuCache((prev) => {
+      const next = { ...prev };
+      for (const r of results) {
+        if (r.status === "fulfilled") {
+          next[r.value.id] = r.value.skus;
+        }
       }
-      // ถ้ามี subVariant ให้ไปวนซ้ำ
-      if (v.variants && v.variants.length > 0) {
-        return {
-          ...v,
-          variants: updateVariantTree(v.variants, variantToUpdate),
-        };
-      }
-      return v;
+      return next;
     });
   };
 
-  // Helper หา variant ในต้นไม้
-  const findVariantInTree = (
-    variants: ProductVariantBase[],
-    id: string
-  ): boolean => {
-    for (const v of variants) {
-      if (v._id === id) return true;
-      if (v.variants && v.variants.length > 0) {
-        if (findVariantInTree(v.variants, id)) return true;
-      }
-    }
-    return false;
+  const handleRowClick = async (p: ProductListItem) => {
+    toggleRow(p._id);
   };
 
-  const handleSetSuccess = (
-    id: string | number,
-    variant: ProductVariantBase
-  ) => {
-    console.log(variant, "variant");
-    setProducts((prev) =>
-      prev.map((p) => {
-        console.log(id, "id");
-
-        if (p._id !== id) return p;
-        // ถ้ายังไม่มี variants ให้สร้างใหม่
-        if (!p.variants) {
-          return { ...p, variants: [variant] };
-        }
-
-        // ถ้ามีอยู่แล้ว → update แบบ recursive
-        const found = findVariantInTree(p.variants, variant._id as string);
-        console.log(found, "found");
-
-        return {
-          ...p,
-          variants: found
-            ? updateVariantTree(p.variants, variant)
-            : [...p.variants, variant],
-        };
-      })
-    );
-    setModalVariant({ type: "none" });
-  };
-
-  const handleDelete = async (target: DeleteTarget) => {
+  const deleteNow = async () => {
+    if (!deleting) return;
     try {
-      if (target.type === "product") {
+      if (deleting.type === "product") {
         const res = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/products/${target.productId}`,
+          `${process.env.NEXT_PUBLIC_API_URL}/products/${deleting.productId}`,
           {
             method: "DELETE",
-            headers: { "Content-Type": "application/json" },
             credentials: "include",
           }
         );
-        if (res.ok) {
-          toast.success("Product deleted successfully");
-          setProducts((prev) => prev.filter((p) => p._id !== target.productId));
-        } else {
-          const data = await res.json();
-          toast.error(data.message || "Failed to delete product");
-        }
-      } else if (target.type === "variant") {
-        // DELETE variant ด้วย productId, variantId (แนะนำสร้าง endpoint DELETE /products/:productId/variant/:variantId)
+        if (!res.ok) throw new Error(await res.text());
+        setProducts((prev) => prev.filter((p) => p._id !== deleting.productId));
+        // ลบแคช SKUs ด้วย
+        setSkuCache((prev) => {
+          const { [deleting.productId]: _, ...rest } = prev;
+          return rest;
+        });
+        toast.success("ลบสินค้าแล้ว");
+      } else {
+        const { productId, skuId } = deleting;
+        // เลือกหนึ่งรูปแบบตาม BE ของคุณ:
         const res = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/products/${target.productId}/variant/${target.variantId}`,
+          `${process.env.NEXT_PUBLIC_API_URL}/products/${productId}/skus/${skuId}`,
           {
             method: "DELETE",
-            headers: { "Content-Type": "application/json" },
             credentials: "include",
           }
         );
-        if (res.ok) {
-          toast.success("Variant deleted successfully");
-          // ลบออกจาก state ใน frontend
-          setProducts((prev) =>
-            prev.map((p) =>
-              p._id === target.productId
-                ? {
-                    ...p,
-                    variants: Array.isArray(p.variants)
-                      ? removeVariantInTree(p.variants, target.variantId)
-                      : [],
-                  }
-                : p
-            )
-          );
-        } else {
-          const data = await res.json();
-          toast.error(data.message || "Failed to delete variant");
-        }
+        if (!res.ok) throw new Error(await res.text());
+        setSkuCache((prev) => ({
+          ...prev,
+          [productId]: (prev[productId] ?? []).filter((s) => s._id !== skuId),
+        }));
+        toast.success("ลบ SKU แล้ว");
       }
-    } catch (err) {
-      toast.error("An error occurred while deleting");
-      console.error(err);
+    } catch {
+      toast.error("ลบไม่สำเร็จ");
+    } finally {
+      setDeleting(null);
     }
   };
 
-  if (loading) return <div>Loading...</div>;
+  if (loading) return <div className="p-6">Loading...</div>;
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       <div className="mb-4">
         <Link
-          href={`/store/dashboard`}
+          href="/store/dashboard"
           className="text-sm text-indigo-500 hover:underline"
         >
           ← Back to Dashboard
@@ -230,196 +214,250 @@ export default function ProductList(): React.ReactElement {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-semibold text-white">Product List</h1>
         <Link
-          href={"/store/products/create"}
-          className="inline-block px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 cursor-pointer"
+          href="/store/products/create"
+          className="inline-block px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
         >
           +Add Product
         </Link>
       </div>
 
-      <div className="overflow-x-auto rounded-xl shadow">
+      <div className="overflow-x-auto rounded-xl shadow select-none">
         <table className="min-w-full text-left bg-gray-800 rounded-xl border border-gray-700">
           <thead className="bg-gray-600 text-white">
             <tr className="text-center">
-              <th className="px-4 py-3 border border-gray-700 w-1/6">Name</th>
-              <th className="px-4 py-3 border border-gray-700 w-1/6">
+              <th className="px-4 py-3 border border-gray-700 w-[16%]">Name</th>
+              <th className="px-4 py-3 border border-gray-700 w-[12%]">
                 Category
               </th>
-              <th className="px-4 py-3 border border-gray-700 w-1/6">Type</th>
-              <th className="px-4 py-3 border border-gray-700 w-1/6">Image</th>
-              <th className="px-4 py-3 border border-gray-700 w-1/6">
-                Price (THB)
+              <th className="px-4 py-3 border border-gray-700 w-[10%]">Type</th>
+              <th className="px-4 py-3 border border-gray-700 w-[14%]">
+                Image
               </th>
-              <th className="px-4 py-3 border border-gray-700 w-1/6">Stock</th>
-              <th className="px-4 py-3 border border-gray-700 w-1/6">Status</th>
-              <th className="px-4 py-3 border border-gray-700 w-1/6">
+              <th className="px-4 py-3 border border-gray-700 w-[18%]">
+                Price
+              </th>
+              <th className="px-4 py-3 border border-gray-700 w-[10%]">
+                #SKUs
+              </th>
+              <th className="px-4 py-3 border border-gray-700 w-[10%]">
+                Status
+              </th>
+              <th className="px-4 py-3 border border-gray-700 w-[10%]">
                 Actions
               </th>
             </tr>
           </thead>
+
           <tbody>
-            {products.map((p) => (
-              <React.Fragment key={p._id}>
-                <tr
-                  className={`border-gray-700 hover:bg-gray-950 ${
-                    Array.isArray(p.variants) && p.variants.length > 0
-                      ? "cursor-pointer"
-                      : ""
-                  } ${openVariantIds.includes(p._id) ? "bg-gray-900" : ""}`}
-                  onClick={() => {
-                    console.log(p, "product");
-                    if (Array.isArray(p.variants) && p.variants.length > 0) {
-                      toggleVariant(p._id);
-                    }
-                  }}
-                >
-                  <td className="px-4 py-3 border border-gray-700 text-left">
-                    <div className="flex items-center">
-                      {/* Col 1: caret icon (20% width) */}
-                      <div className="w-1/5 flex justify-center items-center">
-                        {p.variants && p.variants.length > 0 && (
-                          <span className="text-xs">
-                            {openVariantIds.includes(p._id) ? (
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                width="24"
-                                height="24"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                className="icon icon-tabler icons-tabler-outline icon-tabler-caret-down"
-                              >
-                                <path
-                                  stroke="none"
-                                  d="M0 0h24v24H0z"
-                                  fill="none"
-                                />
-                                <path d="M6 10l6 6l6 -6h-12" />
-                              </svg>
-                            ) : (
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                width="24"
-                                height="24"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                className="icon icon-tabler icons-tabler-outline icon-tabler-caret-right"
-                              >
-                                <path
-                                  stroke="none"
-                                  d="M0 0h24v24H0z"
-                                  fill="none"
-                                />
-                                <path d="M10 18l6 -6l-6 -6v12" />
-                              </svg>
-                            )}
-                          </span>
-                        )}
-                      </div>
-                      {/* Col 2: value (80%) */}
-                      <div className="w-4/5 pl-2 truncate">{p.name}</div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 border border-gray-700 text-left">
-                    {p.category}
-                  </td>
-                  <td className="px-4 py-3 border border-gray-700 text-left">
-                    {p.type}
-                  </td>
-                  <td className="px-4 py-3 border border-gray-700 text-center">
-                    {p.image ? (
-                      <Image
-                        src={p.image}
-                        alt={p.name}
-                        width={80}
-                        height={80}
-                        className="h-25 w-25 mx-auto rounded border-1 border-red-700"
-                      />
-                    ) : null}
-                  </td>
-                  <td className="px-4 py-3 border border-gray-700 text-right">
-                    {typeof p.price === "number"
-                      ? p.price.toLocaleString("en-US", {
-                          minimumFractionDigits: 2,
-                        })
-                      : ""}
-                  </td>
-                  <td className="px-4 py-3 border border-gray-700 text-right">
-                    {typeof p.stock === "number"
-                      ? p.stock.toLocaleString("en-US", {
-                          minimumFractionDigits: 0,
-                        })
-                      : ""}
-                  </td>
-                  <td className="px-4 py-3 border border-gray-700 text-center">
-                    {p.status}
-                  </td>
-                  <td
-                    onClick={(e) => e.stopPropagation()}
-                    className="px-4 py-3 border border-gray-700 text-center space-y-1"
+            {products.map((p) => {
+              const opened = openIds.has(p._id);
+              const skus = skuCache[p._id];
+
+              // คำนวณช่วงราคา (min–max) จาก SKUs (ตกลงค่า defaultPrice ให้กับ SKU ที่ไม่ระบุราคา)
+              const priceSummary = priceSummaryFor(skus, p.defaultPrice);
+
+              return (
+                <React.Fragment key={p._id}>
+                  <tr
+                    className={`border-gray-700 hover:bg-gray-950 ${
+                      skus ? "cursor-pointer" : ""
+                    } ${opened ? "bg-gray-900" : ""}`}
+                    onClick={() => handleRowClick(p)}
                   >
-                    <Link
-                      href={`/store/products/${p._id}/edit`}
-                      className="px-2 py-1 text-blue-600 hover:text-blue-700 hover:underline cursor-pointer"
+                    <td className="px-4 py-3 border border-gray-700 text-left">
+                      <div className="flex items-center">
+                        <div className="w-6 flex justify-center items-center mr-2">
+                          <span className="text-xs">{opened ? "▾" : "▸"}</span>
+                        </div>
+                        <div className="truncate">{p.name}</div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 border border-gray-700">
+                      {p.category}
+                    </td>
+                    <td className="px-4 py-3 border border-gray-700">
+                      {p.type}
+                    </td>
+                    <td className="px-4 py-3 border border-gray-700 text-center">
+                      {p.image ? (
+                        <Image
+                          src={p.image}
+                          alt={p.name}
+                          width={80}
+                          height={80}
+                          className="h-20 w-20 mx-auto rounded object-cover"
+                        />
+                      ) : (
+                        "—"
+                      )}
+                    </td>
+                    <td className="px-4 py-3 border border-gray-700 text-right">
+                      {priceSummary.text}
+                    </td>
+                    <td className="px-4 py-3 border border-gray-700 text-center">
+                      {priceSummary.count || (skus ? 0 : "…")}
+                    </td>
+                    <td className="px-4 py-3 border border-gray-700 text-center">
+                      {p.status}
+                    </td>
+                    <td
+                      className="px-4 py-3 border border-gray-700 text-center space-y-1"
+                      onClick={(e) => e.stopPropagation()}
                     >
-                      Edit
-                    </Link>
-                    <button
-                      onClick={() =>
-                        setDeleteTarget({ type: "product", productId: p._id })
-                      }
-                      className="px-2 py-1 text-red-600 hover:text-red-700 hover:underline cursor-pointer"
-                    >
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-                {/* --- แถวแสดง variants ถ้ามี --- */}
-                {Array.isArray(p.variants) &&
-                  p.variants.length > 0 &&
-                  openVariantIds.includes(p._id) && (
+                      <Link
+                        href={`/store/products/${p._id}/edit`}
+                        className="px-2 py-1 text-blue-500 hover:underline"
+                      >
+                        Edit
+                      </Link>
+                      <button
+                        onClick={() =>
+                          setDeleting({ type: "product", productId: p._id })
+                        }
+                        className="px-2 py-1 text-red-500 hover:underline"
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+
+                  {/* SKUs section */}
+                  {opened && (
                     <tr className="bg-gray-900/70">
                       <td colSpan={8} className="border-gray-800">
-                        <div className="ml-8 mb-4">
-                          {/* <div className="font-bold mb-1 text-gray-300">
-                            Variants:
-                          </div> */}
-                          <VariantTable
-                            variants={p.variants}
-                            productId={p._id}
-                            onSet={(productId, variant) =>
-                              setModalVariant({
-                                type: "set",
-                                id: productId,
-                                variant: variant,
-                              })
-                            }
-                            openVariantIds={openVariantIds}
-                            onToggle={toggleVariant}
-                            onDelete={(productId, variantId) => {
-                              setDeleteTarget({
-                                type: "variant",
-                                productId: productId,
-                                variantId: variantId,
-                              });
-                            }}
-                          />
-                        </div>
+                        {skus ? (
+                          skus.length ? (
+                            <div className="p-4">
+                              <table className="min-w-full text-sm border border-gray-700">
+                                <thead className="bg-gray-700">
+                                  <tr>
+                                    <th className="px-3 py-2 border border-gray-700 text-left">
+                                      Attributes
+                                    </th>
+                                    <th className="px-3 py-2 border border-gray-700 text-right">
+                                      Price
+                                    </th>
+                                    <th className="px-3 py-2 border border-gray-700">
+                                      SKU Code
+                                    </th>
+                                    <th className="px-3 py-2 border border-gray-700">
+                                      Image
+                                    </th>
+                                    <th className="px-3 py-2 border border-gray-700">
+                                      On-hand
+                                    </th>
+                                    <th className="px-3 py-2 border border-gray-700">
+                                      Reserved
+                                    </th>
+                                    <th className="px-3 py-2 border border-gray-700">
+                                      Available
+                                    </th>
+                                    <th className="px-3 py-2 border border-gray-700">
+                                      Purchasable
+                                    </th>
+                                    <th className="px-3 py-2 border border-gray-700 w-20">
+                                      Actions
+                                    </th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {skus.map((s) => {
+                                    const available =
+                                      s.available ??
+                                      Math.max(
+                                        0,
+                                        (s.onHand ?? 0) - (s.reserved ?? 0)
+                                      );
+                                    const low = available <= 5;
+                                    return (
+                                      <tr key={s._id}>
+                                        <td className="px-3 py-2 border border-gray-700">
+                                          {attrsToText(s.attributes)}
+                                        </td>
+                                        <td className="px-3 py-2 border border-gray-700 text-right">
+                                          {fmtPrice(
+                                            typeof s.price === "number"
+                                              ? s.price
+                                              : p.defaultPrice
+                                          )}
+                                        </td>
+                                        <td className="px-3 py-2 border border-gray-700">
+                                          {s.skuCode ?? "—"}
+                                        </td>
+                                        <td className="px-3 py-2 border border-gray-700 truncate">
+                                          {s.image ? (
+                                            <a
+                                              href={s.image}
+                                              className="text-indigo-400 hover:underline"
+                                              target="_blank"
+                                            >
+                                              link
+                                            </a>
+                                          ) : (
+                                            "—"
+                                          )}
+                                        </td>
+                                        <td className="px-3 py-2 border border-gray-700 text-right">
+                                          {fmtPrice(s.onHand) || "—"}
+                                        </td>
+                                        <td className="px-3 py-2 border border-gray-700 text-right">
+                                          {fmtPrice(s.reserved) || "—"}
+                                        </td>
+                                        <td
+                                          className={`px-3 py-2 border border-gray-700 text-right ${
+                                            low
+                                              ? "text-amber-400 font-semibold"
+                                              : ""
+                                          }`}
+                                        >
+                                          {fmtPrice(available) || "—"}
+                                        </td>
+                                        <td className="px-3 py-2 border border-gray-700 text-center">
+                                          {s.purchasable ?? true ? "✓" : "—"}
+                                        </td>
+                                        <td className="px-3 py-2 border border-gray-700 text-center">
+                                          {/* <button
+                                            className="px-2 py-1 text-red-500 hover:underline"
+                                            onClick={() =>
+                                              setDeleting({
+                                                type: "sku",
+                                                productId: p._id,
+                                                skuId: String(s._id),
+                                              })
+                                            }
+                                          >
+                                            Delete
+                                          </button> */}
+                                          <button
+                                            type="button"
+                                            className="px-3 py-1 rounded bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer"
+                                            onClick={() => openAdjust(p._id, s)}
+                                          >
+                                            Adjust
+                                          </button>
+                                        </td>
+                                      </tr>
+                                    );
+                                  })}
+                                </tbody>
+                              </table>
+                            </div>
+                          ) : (
+                            <div className="p-4 text-gray-400">No SKUs.</div>
+                          )
+                        ) : (
+                          <div className="p-4 text-gray-400">Loading SKUs…</div>
+                        )}
                       </td>
                     </tr>
                   )}
-              </React.Fragment>
-            ))}
-            {products.length === 0 && (
+                </React.Fragment>
+              );
+            })}
+
+            {!products.length && (
               <tr>
-                <td colSpan={7} className="text-center py-4 text-gray-500">
+                <td colSpan={8} className="text-center py-6 text-gray-400">
                   No products found.
                 </td>
               </tr>
@@ -428,19 +466,42 @@ export default function ProductList(): React.ReactElement {
         </table>
       </div>
 
-      {/* Modal แยก */}
-      <ConfirmModal
-        open={!!deleteTarget}
-        title="ยืนยันการลบ"
-        message="คุณต้องการลบรายการนี้ใช่หรือไม่?"
-        confirmText="ลบ"
-        cancelText="ยกเลิก"
-        onConfirm={() => {
-          if (!deleteTarget) return;
-          handleDelete(deleteTarget); // ส่ง object ที่ type ชัดเจน
-          setDeleteTarget(null);
+      {/* Confirm modal (ง่ายๆ) */}
+      {deleting && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 w-[420px]">
+            <h3 className="text-lg font-semibold text-white mb-2">
+              ยืนยันการลบ
+            </h3>
+            <p className="text-gray-300 mb-4">
+              คุณต้องการลบรายการนี้ใช่หรือไม่?
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                className="px-4 py-2 rounded border border-gray-600 text-gray-200 hover:bg-gray-800"
+                onClick={() => setDeleting(null)}
+              >
+                ยกเลิก
+              </button>
+              <button
+                className="px-4 py-2 rounded bg-red-600 hover:bg-red-700 text-white"
+                onClick={deleteNow}
+              >
+                ลบ
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <AdjustStockModal
+        value={target}
+        open={adjustOpen}
+        onClose={() => {
+          setAdjustOpen(false);
+          setTarget(null);
         }}
-        onCancel={() => setDeleteTarget(null)}
+        onSubmit={adjustStock}
       />
     </div>
   );

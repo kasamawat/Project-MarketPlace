@@ -1,9 +1,9 @@
 import ProductCard from "@/components/ProductCard";
 import StoreHeader from "@/components/store-public/StoreHeader";
-import { ProductBase } from "@/types/product/base/product-base.types";
-import { StorePubilc } from "@/types/store.types";
+import { PublicProduct } from "@/types/product/products.types";
+import { StorePubilc } from "@/types/store/stores.types";
 
-export default function ClientStoreDetail({ store, product }: { store: StorePubilc, product: ProductBase[] }) {
+export default function ClientStoreDetail({ store, product }: { store: StorePubilc, product: PublicProduct[] }) {
     console.log(product,'product');
     
   return (

@@ -1,5 +1,5 @@
-import Link from "next/link";
 import ProductEditor from "@/components/store/products/ProductEditor";
+import Link from "next/link";
 
 export default function CreateProductPage() {
   return (
