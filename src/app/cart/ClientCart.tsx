@@ -1,13 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import Image from "next/image";
 import { useCart } from "@/app/context/CartContext";
 import Link from "next/link";
+import { attrsToText } from "@/lib/helpers/productList";
 
 const colNames = [
   "IMAGE",
   "PRODUCT NAME",
+  "VARIATION",
   "UNIT PRICE",
   "QTY",
   "SUBTOTAL",
@@ -18,16 +20,8 @@ export default function ClientCart() {
   //   const [cart, setCart] = useState<CartItem[]>([]);
   const { cartItems, removeFromCart, addToCart, clearCart } = useCart();
 
-  useEffect(() => {
-    // โหลด cart จาก localStorage หรือ context
-    // const stored = localStorage.getItem("cart");
-    // if (stored) {
-    //   setCart(JSON.parse(stored));
-    // }
-  }, []);
-
-  const total = cartItems.reduce(
-    (sum, item) => sum + item.price * item.quantity,
+  const totalPrice = cartItems.reduce(
+    (sum, item) => sum + item.sku.price * item.quantity,
     0
   );
 
@@ -48,7 +42,7 @@ export default function ClientCart() {
           <h1 className="flex text-2xl font-bold mb-4 text-white">
             Your cart items
           </h1>
-          <div className="grid grid-cols-6 gap-4 text-center border border-gray-600 p-4">
+          <div className="grid grid-cols-7 gap-4 text-center border border-gray-600 p-4">
             {colNames.map((item, idx) => (
               <div key={idx} className="col-span-1">
                 <h2 className="text-white font-medium">{item}</h2>
@@ -57,28 +51,33 @@ export default function ClientCart() {
           </div>
           {cartItems.map((item) => (
             <div
-              key={item.id}
-              className="grid grid-cols-6 gap-4 text-center border border-gray-600 p-4"
+              key={`${item.productId}::${item.sku.skuId}`}
+              className="grid grid-cols-7 gap-4 text-center border border-gray-600 p-4"
             >
               <Link
-                href={`/products/${item.id}`}
+                href={`/products/${item.productId}`}
                 className="col-span-1 flex items-center justify-center"
               >
                 <Image
-                  src={item.image}
-                  alt={item.name}
+                  src={item.productImage || "/no-image.png"}
+                  alt={item.productName}
                   width={800}
                   height={600}
                   className="w-40 h-50 object-cover rounded mr-4 ml-4 mt-2 mb-2 border-1 border-solid border-gray-600"
                 />
               </Link>
               <div className="col-span-1 flex items-center justify-center">
-                <h2 className="text-white font-medium">{item.name}</h2>
+                <h2 className="text-white font-medium">{item.productName}</h2>
+              </div>
+              <div className="col-span-1 flex items-center justify-center">
+                <h2 className="text-white font-medium">
+                  {attrsToText(item.sku.attributes)}
+                </h2>
               </div>
               <div className="col-span-1 flex items-center justify-center">
                 <p className="text-gray-400 text-sm">
                   ฿
-                  {item.price.toLocaleString(undefined, {
+                  {item.sku.price.toLocaleString(undefined, {
                     minimumFractionDigits: 2,
                   })}
                 </p>
@@ -87,7 +86,23 @@ export default function ClientCart() {
                 <div className="flex items-center justify-center border border-gray-600 rounded py-2">
                   <button
                     className="text-lg font-bold text-white px-3 cursor-pointer"
-                    onClick={() => addToCart(item, -1)}
+                    onClick={() =>
+                      addToCart({
+                        product: {
+                          _id: item.productId,
+                          name: item.productName,
+                          image: item.productImage,
+                          store: {
+                            _id: String(item.store?.id),
+                            slug: item?.store?.slug,
+                            name: item?.store?.name || "",
+                          },
+                          skuCount: 1, // ไม่ได้ใช้ใน Cart แต่ต้องมี
+                        },
+                        sku: { _id: item.sku.skuId, ...item.sku },
+                        quantity: -1,
+                      })
+                    }
                   >
                     -
                   </button>
@@ -99,7 +114,23 @@ export default function ClientCart() {
                   />
                   <button
                     className="text-lg font-bold text-white px-3 cursor-pointer"
-                    onClick={() => addToCart(item, 1)}
+                    onClick={() =>
+                      addToCart({
+                        product: {
+                          _id: item.productId,
+                          name: item.productName,
+                          image: item.productImage,
+                          store: {
+                            _id: String(item.store?.id),
+                            slug: item?.store?.slug,
+                            name: item?.store?.name || "",
+                          },
+                          skuCount: 1, // ไม่ได้ใช้ใน Cart แต่ต้องมี
+                        },
+                        sku: { _id: item.sku.skuId, ...item.sku },
+                        quantity: 1,
+                      })
+                    }
                   >
                     +
                   </button>
@@ -108,7 +139,7 @@ export default function ClientCart() {
               <div className="col-span-1 flex items-center justify-center">
                 <p className="text-green-400 text-sm">
                   ฿
-                  {(item.quantity * item.price).toLocaleString(undefined, {
+                  {(item.quantity * item.sku.price).toLocaleString(undefined, {
                     minimumFractionDigits: 2,
                   })}
                 </p>
@@ -117,7 +148,7 @@ export default function ClientCart() {
                 <button
                   className="text-red-500 hover:text-red-700 border border-red-500 px-4 py-2 rounded hover:bg-red-500 hover:text-white transition-colors duration-200 cursor-pointer"
                   onClick={() => {
-                    removeFromCart(item.id);
+                    removeFromCart(item.productId, item.sku.skuId);
                   }}
                 >
                   Remove
@@ -168,11 +199,17 @@ export default function ClientCart() {
                 Total products
               </p>
               <p className="text-lg text-green-500 font-semibold">
-                ฿{total.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                ฿
+                {totalPrice.toLocaleString(undefined, {
+                  minimumFractionDigits: 2,
+                })}
               </p>
             </div>
             <div className="flex justify-center text-center mr-4 ml-4">
-              <Link href="checkout" className="w-full mt-4 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700">
+              <Link
+                href="checkout"
+                className="w-full mt-4 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700"
+              >
                 Proceed to Checkout
               </Link>
             </div>

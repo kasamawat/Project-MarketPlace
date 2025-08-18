@@ -6,6 +6,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import React, { useEffect, useRef } from "react";
 import Image from "next/image";
+import { attrsToText } from "@/lib/helpers/productList";
 
 const NavbarCart: React.FC = () => {
   const { cartItems, removeFromCart } = useCart();
@@ -13,7 +14,7 @@ const NavbarCart: React.FC = () => {
   const [isCartOpen, setIsCartOpen] = React.useState(false);
   const totalItems = cartItems.length;
   const totalPrice = cartItems.reduce(
-    (sum, item) => sum + item.price * item.quantity,
+    (sum, item) => sum + item.sku.price * item.quantity,
     0
   );
 
@@ -85,30 +86,40 @@ const NavbarCart: React.FC = () => {
           >
             <ul className="divide-y divide-gray-200 max-h-72 overflow-y-auto">
               {cartItems.map((item) => (
-                <li key={item._id} className="py-2 text-sm flex justify-between">
-                  <div className="grid grid-cols-6 flex items-center gap-2">
+                <li
+                  key={`${item.productId}::${item.sku.skuId}`}
+                  className="py-2 text-sm flex justify-between"
+                >
+                  <div className="grid grid-cols-6 items-center gap-2">
                     <div className="p-2 col-span-2 flex items-center justify-center">
-                      <Link href={`/products/${item._id}`}>
+                      <Link href={`/products/${item.productId}`}>
                         <Image
-                          src={item.image}
-                          alt={item.name}
+                          src={item?.productImage || "/no-image.png"}
+                          alt={item.productName}
                           width={25}
                           height={28}
-                          className="w-25 h-28 object-cover rounded-md shadow rounded border-1 border-solid border-gray-600"
+                          className="w-25 h-28 object-cover rounded-md shadow border-1 border-solid border-gray-600"
                         />
                       </Link>
                     </div>
                     <div className="col-span-3 justify-center gap-1">
-                      <p className="font-medium break-words">{item.name}</p>
+                      <p className="font-medium break-words">
+                        {item.productName}
+                      </p>
+                      <p className="font-medium break-words">
+                        {attrsToText(item.sku.attributes)}
+                      </p>
                       <p className="text-gray-500">Qty: {item.quantity}</p>
                       <p className="font-semibold">
-                        {(item.price * item.quantity).toFixed(2)}฿
+                        {(item.sku.price * item.quantity).toFixed(2)}฿
                       </p>
                     </div>
                     <div className="col-span-1 flex items-center justify-center">
                       <button
                         className="h-full text-sm text-white hover:text-gray-700 cursor-pointer bg-red-500 border-circles rounded-full p-1"
-                        onClick={() => removeFromCart(item._id)}
+                        onClick={() =>
+                          removeFromCart(item.productId, item.sku.itemId)
+                        }
                       >
                         <svg
                           xmlns="http://www.w3.org/2000/svg"

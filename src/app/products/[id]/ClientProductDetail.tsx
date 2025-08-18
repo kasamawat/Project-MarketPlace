@@ -10,6 +10,15 @@ type Props = {
   product: PublicProduct;
   skus: SkuPublic[];
 };
+// ใช้ Record แทน Attrs เพื่อให้ชัดเจนว่าเป็น key-value pairs
+type Attrs = Record<string, string>;
+
+const isPartialMatch = (attrs: Attrs = {}, selected: Attrs = {}) =>
+  Object.entries(selected).every(([k, v]) => !v || attrs[k] === v);
+
+const isExactMatch = (attrs: Attrs = {}, selected: Attrs = {}) =>
+  Object.keys(attrs).length === Object.keys(selected).length &&
+  isPartialMatch(attrs, selected);
 
 const mockStar = 4.5;
 const fmt = (n?: number) =>
@@ -57,36 +66,71 @@ export default function ClientProductDetail({ product, skus }: Props) {
   }, [fields, skus]);
 
   // helper: ตรวจว่า option ใช้ได้ภายใต้ selection ปัจจุบัน
-  const isOptionAvailable = (field: string, opt: string) => {
-    return skus.some((sku) => {
-      // ต้องตรงกับ options ที่เลือกไว้ทุกตัว (ยกเว้น field ปัจจุบัน)
-      const okOtherFields = Object.entries(selectedOptions).every(([k, v]) => {
-        if (k === field) return true;
-        return (sku.attributes?.[k] ?? "") === v;
-      });
-      if (!okOtherFields) return false;
-      // field ปัจจุบันต้องมีค่า opt
-      return (sku.attributes?.[field] ?? "") === opt;
-    });
-  };
+  // const isOptionAvailable = (field: string, opt: string) => {
+  //   return skus.some((s) => {
+  //     if (s.purchasable === false) return false;
+  //     if ((s.attributes?.[field] ?? "") !== opt) return false;
 
-  // SKU ที่ match กับ selection (ถ้าเลือกครบทุก field)
-  const matchedSku = useMemo(() => {
-    if (!fields.length) {
-      // ไม่มี fields (base SKU) -> ถ้ามี 1 ตัวก็ใช้ตัวนั้น
-      return skus.length ? skus[0] : undefined;
+  //     // ต้องตรงกับ selection ปัจจุบันทุก field (ยกเว้น field ที่กำลังเช็ค)
+  //     const okOtherFields = Object.entries(selectedOptions).every(([k, v]) =>
+  //       k === field ? true : (s.attributes?.[k] ?? "") === v
+  //     );
+  //     if (!okOtherFields) return false;
+
+  //     // ต้องมีสต็อกให้เลือก
+  //     return (s.available ?? 0) > 0;
+  //   });
+  // };
+
+  const optionAvailMap = useMemo(() => {
+    const map: Record<string, Record<string, number>> = {};
+    for (const f of fields) {
+      map[f] = {};
+      const opts = optionsMap[f] ?? [];
+      for (const opt of opts) {
+        const total = skus
+          .filter((s) => s.purchasable !== false)
+          .filter((s) => (s.attributes?.[f] ?? "") === opt)
+          .filter((s) =>
+            Object.entries(selectedOptions).every(([k, v]) =>
+              k === f ? true : (s.attributes?.[k] ?? "") === v
+            )
+          )
+          .reduce((sum, s) => sum + Math.max(0, s.available ?? 0), 0);
+        map[f][opt] = total;
+      }
     }
-    // ต้องเลือกครบทุก field
-    const allChosen = fields.every((f) => !!selectedOptions[f]);
-    if (!allChosen) return undefined;
+    return map;
+  }, [skus, selectedOptions, fields, optionsMap]);
 
-    return skus.find((sku) =>
-      fields.every((f) => (sku.attributes?.[f] ?? "") === selectedOptions[f])
+  // base SKU = attributes ว่าง {}
+  const baseSku = useMemo(
+    () => skus.find((s) => Object.keys(s.attributes ?? {}).length === 0),
+    [skus]
+  );
+
+  // 1) หา SKU ที่ “ตรงครบทุก field” เพื่อใช้ Add to Cart
+  const matchedSku = useMemo(() => {
+    if (!fields.length) return baseSku ?? skus[0]; // ไม่มี fields = สินค้าเดี่ยว
+    const allChosen = fields.every((f) => !!selectedOptions[f]);
+    if (!allChosen) return undefined; // ยังเลือกไม่ครบ -> ยังไม่ผูกกับ SKU ใด
+    return skus.find(
+      (s) =>
+        s.purchasable !== false && isExactMatch(s.attributes, selectedOptions)
     );
-  }, [fields, selectedOptions, skus]);
+  }, [fields, selectedOptions, skus, baseSku]);
+
+  // 2) ยอดคงเหลือรวมของ “ตัวที่แมตช์ตามสิ่งที่เลือก (partial)”
+  const availableForSelection = useMemo(() => {
+    if (!fields.length) return Math.max(0, baseSku?.available ?? 0);
+    return skus
+      .filter((s) => s.purchasable !== false)
+      .filter((s) => isPartialMatch(s.attributes, selectedOptions))
+      .reduce((sum, s) => sum + Math.max(0, s.available ?? 0), 0);
+  }, [fields, selectedOptions, skus, baseSku]);
 
   const selectedPrice = matchedSku?.price ?? undefined;
-  const selectedAvailable = matchedSku?.available; // อาจ undefined ถ้า BE ไม่ส่ง
+  const selectedAvailable = availableForSelection; // อาจ undefined ถ้า BE ไม่ส่ง
 
   // ป้ายราคา: เลือกครบ -> ราคา SKU, ไม่ครบ -> ช่วงจาก product
   const priceLabel =
@@ -168,7 +212,9 @@ export default function ClientProductDetail({ product, skus }: Props) {
                   <span className="block text-white text-sm mb-2">{field}</span>
                   <div className="flex flex-wrap gap-2">
                     {opts.map((opt) => {
-                      const available = isOptionAvailable(field, opt);
+                      const count = optionAvailMap[field][opt] ?? 0;
+                      const available = count > 0;
+                      // const available = isOptionAvailable(field, opt);
                       const active = selectedOptions[field] === opt;
                       return (
                         <button
@@ -259,12 +305,22 @@ export default function ClientProductDetail({ product, skus }: Props) {
                 className={`w-full bg-gray-800 text-white font-semibold py-3 px-4 rounded transition-colors duration-300 ${
                   matchedSku ? "hover:bg-gray-700 cursor-pointer" : "opacity-50"
                 }`}
-                disabled={!matchedSku}
+                disabled={!matchedSku || (matchedSku.available ?? 0) < 1}
                 onClick={() => {
                   if (!matchedSku) return;
                   // ปรับตาม signature ของ useCart ของคุณ
                   // ตัวอย่าง: addToCart({ productId: product._id, skuId: matchedSku._id, qty: count })
-                  addToCart(product, count);
+                  addToCart({
+                    product: {
+                      _id: product._id,
+                      name: product.name,
+                      image: product.image,
+                      store: product.store, // { id/slug/name } ถ้ามี
+                      skuCount: skus.length,
+                    },
+                    sku: matchedSku,
+                    quantity: count,
+                  });
                 }}
               >
                 Add to Cart
