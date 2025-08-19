@@ -202,14 +202,14 @@ export default function ProductList(): React.ReactElement {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
-      <div className="mb-4">
+      {/* <div className="mb-4">
         <Link
           href="/store/dashboard"
           className="text-sm text-indigo-500 hover:underline"
         >
           ← Back to Dashboard
         </Link>
-      </div>
+      </div> */}
 
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-semibold text-white">Product List</h1>
@@ -372,7 +372,7 @@ export default function ProductList(): React.ReactElement {
                                     return (
                                       <tr key={s._id}>
                                         <td className="px-3 py-2 border border-gray-700">
-                                          {attrsToText(s.attributes)}
+                                          {attrsToText(s.attributes) || "—"}
                                         </td>
                                         <td className="px-3 py-2 border border-gray-700 text-right">
                                           {fmtPrice(

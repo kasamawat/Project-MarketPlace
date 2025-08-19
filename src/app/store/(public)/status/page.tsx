@@ -74,7 +74,7 @@ export default function StoreStatusPage(): React.ReactElement {
         <p className="text-sm mt-2 text-gray-600">ชื่อร้าน: {store.name}</p>
         {store.status === "approved" && (
           <button
-            className="mt-4 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+            className="mt-4 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 cursor-pointer"
             onClick={() => router.push("/store/dashboard")}
           >
             ไปที่หน้าจัดการร้านค้า

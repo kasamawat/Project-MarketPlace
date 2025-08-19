@@ -6,5 +6,13 @@ export type StorePubilc = {
     slug?: string,
     description?: string,
     phone?: string,
-    // productCategory?: string,
+}
+
+export type StoreSecure = StorePubilc & {
+    bankName?: string,
+    bankAccountNumber?: string,
+    bankAccountName?: string,
+    returnPolicy?: string,
+    status: "approved" | "pending" | "rejected",
+    createdAt: string,
 }

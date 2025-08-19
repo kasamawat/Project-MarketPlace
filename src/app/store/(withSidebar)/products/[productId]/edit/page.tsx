@@ -1,4 +1,4 @@
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import Link from "next/link";
 import ProductEditor from "@/components/store/products/ProductEditor";
 import { cookies } from "next/headers";

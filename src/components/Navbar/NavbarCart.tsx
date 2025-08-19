@@ -87,7 +87,7 @@ const NavbarCart: React.FC = () => {
             <ul className="divide-y divide-gray-200 max-h-72 overflow-y-auto">
               {cartItems.map((item) => (
                 <li
-                  key={`${item.productId}::${item.sku.skuId}`}
+                  key={`${item.productId}::${item.sku.itemId}`}
                   className="py-2 text-sm flex justify-between"
                 >
                   <div className="grid grid-cols-6 items-center gap-2">

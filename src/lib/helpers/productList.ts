@@ -10,7 +10,7 @@ export function fmtPrice(n?: number) {
 
 export function attrsToText(attrs: Record<string, string>) {
   const keys = Object.keys(attrs);
-  if (!keys.length) return "—";
+  if (!keys.length) return "";
   return keys
     .sort((a, b) => a.localeCompare(b))
     .map((k) => `${k}: ${attrs[k]}`)

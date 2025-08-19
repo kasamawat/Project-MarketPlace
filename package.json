@@ -12,6 +12,7 @@
     "bcryptjs": "^3.0.2",
     "dotenv": "^17.2.1",
     "jsonwebtoken": "^9.0.2",
+    "lucide-react": "^0.540.0",
     "mongoose": "^8.16.5",
     "next": "15.4.1",
     "next-devtools": "^0.0.1",
