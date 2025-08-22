@@ -1,7 +1,7 @@
 // components/NavbarAccount.tsx
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { JwtPayload } from "@/models/JwtPayload";
 
 type Props = {
@@ -80,6 +80,9 @@ export default function NavbarAccount({
           </Link>
           <Link href="/orders" className="block px-4 py-2 hover:bg-gray-800">
             My Orders
+          </Link>
+          <Link href="/purchase" className="block px-4 py-2 hover:bg-gray-800">
+            My Purchase
           </Link>
 
           {user.storeId && (
