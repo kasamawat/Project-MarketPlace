@@ -48,10 +48,10 @@ export default function ClientCheckOut(): React.ReactElement {
       }
     );
     if (!res.ok) throw new Error(await res.text());
-    const { orderId } = await res.json(); // toClient(order) ต้องคืน orderId ด้วย
+    const { masterOrderId } = await res.json(); // toClient(order) ต้องคืน orderId ด้วย
 
     // 2) ไปหน้าชำระเงิน
-    router.push(`/checkout/pay?orderId=${encodeURIComponent(orderId)}`);
+    router.push(`/checkout/pay/${encodeURIComponent(masterOrderId)}`);
   }
 
   const total = cartItems.reduce(

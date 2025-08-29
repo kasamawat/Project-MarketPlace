@@ -75,14 +75,11 @@ export default function NavbarAccount({
 
       {dropdownOpen && (
         <div className="absolute right-0 mt-7 w-48 bg-gray-900 shadow-lg rounded-lg p-4 z-50">
-          <Link href="/user" className="block px-4 py-2 hover:bg-gray-800">
-            Account
+          <Link href="/account/profile" className="block px-4 py-2 hover:bg-gray-800">
+            My Account
           </Link>
-          <Link href="/orders" className="block px-4 py-2 hover:bg-gray-800">
+          <Link href="/account/orders" className="block px-4 py-2 hover:bg-gray-800">
             My Orders
-          </Link>
-          <Link href="/purchase" className="block px-4 py-2 hover:bg-gray-800">
-            My Purchase
           </Link>
 
           {user.storeId && (

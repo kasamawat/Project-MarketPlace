@@ -12,12 +12,22 @@ export function middleware(req: NextRequest) {
   const isStoreRegisterPage = pathname.startsWith("/store/register");
 
   // =========================================== Client ===========================================
-  // 1. ถ้ามี token แล้ว user เข้า /auth/login หรือ /auth/register → redirect home
+  // ถ้ามี token แล้ว user เข้า /auth/login หรือ /auth/register → redirect home
   if (token && (isLoginPage || isRegisterPage)) {
     return NextResponse.redirect(new URL("/", req.url));
   }
 
-  // 2. ถ้าไม่มี token แล้วเข้า /store/xxx → redirect ไป login
+  // ถ้าไม่มี token แล้วเข้า /account/... -> redirect ไป login
+  const isAccountPath = pathname.startsWith("/account/");
+  console.log(isAccountPath,'isAccountPath');
+  
+  if(!token && isAccountPath) {
+    console.log("PASS");
+    
+    return NextResponse.redirect(new URL("/auth/login", req.url));
+  }
+
+  //  ถ้าไม่มี token แล้วเข้า /store/... → redirect ไป login
   // (ยกเว้น /store/public หรือ path ที่อนุญาต)
   const isStorePath = pathname.startsWith("/store/");
   if (!token && isStorePath) {
@@ -76,6 +86,7 @@ export const config = {
   matcher: [
     "/auth/login",
     "/auth/register",
+    "/account/:path*",
     "/store/:path*",   // ป้องกันทุกหน้าภายใต้ /store/
   ],
 };

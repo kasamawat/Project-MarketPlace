@@ -11,6 +11,25 @@ import { attrsToText } from "@/lib/helpers/productList";
 const NavbarCart: React.FC = () => {
   const { cartItems, removeFromCart } = useCart();
 
+  const groupItems = Object.groupBy(cartItems, (item) =>
+    String(item?.store?.id)
+  );
+
+  const groupStore = cartItems
+    .map((x) => {
+      return x.store;
+    })
+    .filter(
+      (store, idx, self) =>
+        idx === self.findIndex((p) => String(p?.id) === String(store?.id))
+    )
+    .map((x) => {
+      return {
+        ...x,
+        item: groupItems[String(x?.id)],
+      };
+    });
+
   const [isCartOpen, setIsCartOpen] = React.useState(false);
   const totalItems = cartItems.length;
   const totalPrice = cartItems.reduce(
@@ -85,62 +104,80 @@ const NavbarCart: React.FC = () => {
             className="absolute right-0 mt-9 w-92 bg-gray-900 shadow-lg rounded-lg p-4 z-50"
           >
             <ul className="divide-y divide-gray-200 max-h-72 overflow-y-auto">
-              {cartItems.map((item) => (
+              {groupStore.map((store) => (
                 <li
-                  key={`${item.productId}::${item.sku.itemId}`}
+                  key={store.id}
                   className="py-2 text-sm flex justify-between"
                 >
-                  <div className="grid grid-cols-6 items-center gap-2">
-                    <div className="p-2 col-span-2 flex items-center justify-center">
-                      <Link href={`/products/${item.productId}`}>
-                        <Image
-                          src={item?.productImage || "/no-image.png"}
-                          alt={item.productName}
-                          width={25}
-                          height={28}
-                          className="w-25 h-28 object-cover rounded-md shadow border-1 border-solid border-gray-600"
-                        />
-                      </Link>
-                    </div>
-                    <div className="col-span-3 justify-center gap-1">
-                      <p className="font-medium break-words">
-                        {item.productName}
-                      </p>
-                      <p className="font-medium break-words">
-                        {attrsToText(item.sku.attributes)}
-                      </p>
-                      <p className="text-gray-500">Qty: {item.quantity}</p>
-                      <p className="font-semibold">
-                        {(item.sku.price * item.quantity).toFixed(2)}฿
-                      </p>
-                    </div>
-                    <div className="col-span-1 flex items-center justify-center">
-                      <button
-                        className="h-full text-sm text-white hover:text-gray-700 cursor-pointer bg-red-500 border-circles rounded-full p-1"
-                        onClick={() =>
-                          removeFromCart(item.productId, item.sku.itemId)
-                        }
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          width="24"
-                          height="24"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          className="icon icon-tabler icons-tabler-outline icon-tabler-trash"
-                        >
-                          <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                          <path d="M4 7l16 0" />
-                          <path d="M10 11l0 6" />
-                          <path d="M14 11l0 6" />
-                          <path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" />
-                          <path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3" />
-                        </svg>
-                      </button>
+                  <div>
+                    <div className="py-2">Store: {store.name}</div>
+                    <div className="ml-4 divide-y divide-gray-600">
+                      {store.item?.map((item) => (
+                        <div key={`${item.productId}::${item.sku.itemId}`}>
+                          <div className="grid grid-cols-6 items-center gap-2">
+                            <div className="p-2 col-span-2 flex items-center justify-center">
+                              <Link href={`/products/${item.productId}`}>
+                                <Image
+                                  src={item?.productImage || "/no-image.png"}
+                                  alt={item.productName}
+                                  width={25}
+                                  height={28}
+                                  className="w-25 h-28 object-cover rounded-md shadow border-1 border-solid border-gray-600"
+                                />
+                              </Link>
+                            </div>
+                            <div className="col-span-3 justify-center gap-1">
+                              <p className="font-medium break-words">
+                                {item.productName}
+                              </p>
+                              <p className="font-medium break-words">
+                                {attrsToText(item.sku.attributes)}
+                              </p>
+                              <p className="text-gray-500">
+                                Qty: {item.quantity}
+                              </p>
+                              <p className="font-semibold">
+                                {(item.sku.price * item.quantity).toFixed(2)}฿
+                              </p>
+                            </div>
+                            <div className="col-span-1 flex items-center justify-center">
+                              <button
+                                className="h-full text-sm text-white hover:text-gray-700 cursor-pointer bg-red-500 border-circles rounded-full p-1"
+                                onClick={() =>
+                                  removeFromCart(
+                                    item.productId,
+                                    item.sku.itemId
+                                  )
+                                }
+                              >
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  width="24"
+                                  height="24"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  className="icon icon-tabler icons-tabler-outline icon-tabler-trash"
+                                >
+                                  <path
+                                    stroke="none"
+                                    d="M0 0h24v24H0z"
+                                    fill="none"
+                                  />
+                                  <path d="M4 7l16 0" />
+                                  <path d="M10 11l0 6" />
+                                  <path d="M14 11l0 6" />
+                                  <path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" />
+                                  <path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3" />
+                                </svg>
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </li>

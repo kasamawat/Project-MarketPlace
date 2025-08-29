@@ -9,6 +9,7 @@ export function fmtPrice(n?: number) {
 }
 
 export function attrsToText(attrs: Record<string, string>) {
+  if (!attrs) return "";
   const keys = Object.keys(attrs);
   if (!keys.length) return "";
   return keys

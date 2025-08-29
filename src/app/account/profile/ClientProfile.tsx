@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useUser } from "@/contexts/UserContext";
 import toast from "react-hot-toast";
 
-export default function UserPage() {
+export default function ProfilePage() {
   const { user } = useUser();
 
   const [username, setUsername] = useState("");
@@ -37,7 +37,14 @@ export default function UserPage() {
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ username, email, firstname, lastname, gender, dob }),
+          body: JSON.stringify({
+            username,
+            email,
+            firstname,
+            lastname,
+            gender,
+            dob,
+          }),
         }
       );
 
@@ -73,13 +80,10 @@ export default function UserPage() {
                 Username
               </label>
               <input
-                className={`w-full border border-gray-700 p-2 bg-gray-800 text-white rounded ${
-                  isEditing ? "" : "opacity-50"
-                }`}
+                className={`w-full border border-gray-700 p-2 bg-gray-800 text-white rounded opacity-50`}
                 type="text"
                 value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                disabled={!isEditing}
+                disabled={true}
               />
             </div>
 

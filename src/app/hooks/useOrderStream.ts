@@ -1,68 +1,55 @@
 // app/hooks/useOrderStream.ts
 "use client";
 
+import { BuyerOrderDetail } from "@/lib/helpers/orderDetail";
 import * as React from "react";
 
 type OrderStatus =
-    | "awaiting_payment"
+    | "pending_payment"
     | "paying"
+    | "processing"
     | "paid"
-    | "failed"
-    | "canceled"
-    | "checking"; // สถานะระหว่างโหลดครั้งแรก
+    | "shipped" // << เพิ่ม
+    | "delivered" // << เพิ่ม
+    | "expired"
+    | "canceled";
 
-type OrderInfo = {
-    orderId: string;
-    status: OrderStatus;
-    paidAt?: string;
-    paidAmount?: number;
-    paidCurrency?: string;
-    paymentIntentId?: string;
-    chargeId?: string;
-    failureReason?: string;
-};
+const FINAL = new Set<OrderStatus>(["paid", "canceled", "expired"]);
 
-const FINAL = new Set<OrderStatus>(["paid", "failed", "canceled"]);
-
-export function useOrderStream(orderId: string) {
-    const [status, setStatus] = React.useState<OrderStatus>("checking");
-    const [info, setInfo] = React.useState<OrderInfo | null>(null);
+export function useOrderStream(masterOrderId: string) {
+    const [userStatus, setUserStatus] = React.useState<OrderStatus>("pending_payment");
+    const [info, setInfo] = React.useState<BuyerOrderDetail | null>(null);
     const [error, setError] = React.useState<string | null>(null);
 
     const apiBase = process.env.NEXT_PUBLIC_API_URL;
 
     const fetchOrder = React.useCallback(async () => {
-        const res = await fetch(`${apiBase}/orders/${orderId}`, {
+        const res = await fetch(`${apiBase}/orders/${masterOrderId}/result`, {
             credentials: "include",
         });
         if (!res.ok) throw new Error(await res.text());
-        const data = (await res.json()) as {
-            orderId: string;
-            status: OrderStatus;
-            paidAt?: string;
-            paidAmount?: number;
-            paidCurrency?: string;
-            payment?: { intentId?: string; chargeId?: string };
-            failureReason?: string;
-        };
-
-        setStatus(data.status);
+        const data: BuyerOrderDetail = (await res.json());
+        console.log(data,'data');
+        
+        setUserStatus(data.userStatus);
         setInfo({
-            orderId: data.orderId,
-            status: data.status,
+            masterOrderId: data.masterOrderId,
+            userStatus: data.userStatus,
+            createdAt: data.createdAt,
+            currency: data.currency,
+            payment: data.payment,
             paidAt: data.paidAt,
             paidAmount: data.paidAmount,
             paidCurrency: data.paidCurrency,
             paymentIntentId: data.payment?.intentId,
-            chargeId: data.payment?.chargeId,
-            failureReason: data.failureReason,
+            stores: data.stores,
         });
 
-        return data.status;
-    }, [apiBase, orderId]);
+        return data.userStatus;
+    }, [apiBase, masterOrderId]);
 
     React.useEffect(() => {
-        if (!orderId) return;
+        if (!masterOrderId) return;
         let es: EventSource | null = null;
         let pollTimer: ReturnType<typeof setInterval> | null = null;
         let cancelled = false;
@@ -75,7 +62,7 @@ export function useOrderStream(orderId: string) {
                 if (!FINAL.has(cur)) {
                     // เปิด SSE
                     es = new EventSource(
-                        `${apiBase}/orders/${encodeURIComponent(orderId)}/stream`,
+                        `${apiBase}/orders/${encodeURIComponent(masterOrderId)}/stream`,
                         { withCredentials: true }
                     );
 
@@ -87,13 +74,15 @@ export function useOrderStream(orderId: string) {
                             // รองรับทั้งรูปแบบ { type, data } หรือ object ตรง ๆ
                             const payload = parsed?.data ?? parsed;
 
-                            if (payload?.status) {
-                                setStatus(payload.status);
+                            const s = typeof payload === "string" ? payload : payload?.status;
+
+                            if (s) {
+                                setUserStatus(s);
                                 setInfo((prev) => ({
-                                    ...(prev ?? { orderId }),
+                                    ...(prev ?? { masterOrderId }),
                                     ...payload,
                                 }));
-                                if (FINAL.has(payload.status)) {
+                                if (FINAL.has(s)) {
                                     es?.close();
                                     if (pollTimer) clearInterval(pollTimer);
                                 }
@@ -129,7 +118,7 @@ export function useOrderStream(orderId: string) {
             es?.close();
             if (pollTimer) clearInterval(pollTimer);
         };
-    }, [orderId, apiBase, fetchOrder]);
+    }, [masterOrderId, apiBase, fetchOrder]);
 
-    return { status, info, error };
+    return { userStatus, info, error };
 }

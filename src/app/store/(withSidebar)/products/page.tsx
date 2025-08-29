@@ -314,7 +314,7 @@ export default function ProductList(): React.ReactElement {
                         onClick={() =>
                           setDeleting({ type: "product", productId: p._id })
                         }
-                        className="px-2 py-1 text-red-500 hover:underline"
+                        className="px-2 py-1 text-red-500 hover:underline cursor-pointer"
                       >
                         Delete
                       </button>
@@ -478,13 +478,13 @@ export default function ProductList(): React.ReactElement {
             </p>
             <div className="flex justify-end gap-3">
               <button
-                className="px-4 py-2 rounded border border-gray-600 text-gray-200 hover:bg-gray-800"
+                className="px-4 py-2 rounded border border-gray-600 text-gray-200 hover:bg-gray-800 cursor-pointer"
                 onClick={() => setDeleting(null)}
               >
                 ยกเลิก
               </button>
               <button
-                className="px-4 py-2 rounded bg-red-600 hover:bg-red-700 text-white"
+                className="px-4 py-2 rounded bg-red-600 hover:bg-red-700 text-white cursor-pointer"
                 onClick={deleteNow}
               >
                 ลบ

@@ -1,7 +1,9 @@
 // app/checkout/result/ClientResult.tsx
 "use client";
 
+import { useCart } from "@/app/context/CartContext";
 import { useOrderStream } from "@/app/hooks/useOrderStream";
+import Link from "next/link";
 import * as React from "react";
 
 function CenterCard({ children }: { children: React.ReactNode }) {
@@ -14,10 +16,30 @@ function CenterCard({ children }: { children: React.ReactNode }) {
   );
 }
 
-export default function ClientResult({ orderId }: { orderId: string }) {
-  const { status, info, error } = useOrderStream(orderId);
+export default function ClientResult({
+  masterOrderId,
+}: {
+  masterOrderId: string;
+}) {
+  const { userStatus, info, error } = useOrderStream(masterOrderId);
+  console.log(userStatus, "userStatus");
 
-  if (!orderId) return <CenterCard>ไม่พบ orderId</CenterCard>;
+  const { clearCart, refetchCart } = useCart(); // เพิ่ม 2 ฟังก์ชั่นนี้ใน CartContext
+
+  const handledPaidRef = React.useRef(false);
+
+  React.useEffect(() => {
+    if (userStatus !== "paid") return;
+    if (handledPaidRef.current) return; // กันยิงซ้ำ
+    handledPaidRef.current = true;
+
+    // 1) เคลียร์ local ทันที
+    clearCart({ localOnly: true });
+    // 2) ซิงก์จาก BE (ครั้งเดียว)
+    refetchCart();
+  }, [userStatus, clearCart, refetchCart]);
+
+  if (!masterOrderId) return <CenterCard>ไม่พบ orderId</CenterCard>;
   if (error)
     return (
       <CenterCard>
@@ -25,39 +47,49 @@ export default function ClientResult({ orderId }: { orderId: string }) {
       </CenterCard>
     );
 
-  if (status === "paid") {
+  if (userStatus === "paid") {
     return (
       <CenterCard>
         <h1 className="text-2xl font-bold text-green-600">ชำระเงินสำเร็จ</h1>
         <div>
-          ยอด: {info?.paidAmount} {info?.paidCurrency}
+          ยอด: {info?.paidAmount ?? info?.payment?.amount}{" "}
+          {info?.paidCurrency ?? info?.payment?.currency}
         </div>
         <div>
           เวลา: {info?.paidAt ? new Date(info.paidAt).toLocaleString() : "-"}
         </div>
-        <div>Charge ID: {info?.chargeId}</div>
-        <a
-          href="/orders"
+        <div>Charge ID: {info?.payment?.intentId}</div>
+        <Link
+          href="/account/orders"
           className="inline-block mt-4 px-4 py-2 rounded bg-black text-white"
         >
           ไปหน้าคำสั่งซื้อ
-        </a>
+        </Link>
       </CenterCard>
     );
   }
 
-  if (status === "failed" || status === "canceled") {
+  if (userStatus === "canceled") {
     return (
       <CenterCard>
         <h1 className="text-2xl font-bold text-red-600">
           การชำระเงินไม่สำเร็จ
         </h1>
-        <a
+        <Link
           href="/checkout"
           className="inline-block mt-4 px-4 py-2 rounded bg-black text-white"
         >
           ลองใหม่
-        </a>
+        </Link>
+      </CenterCard>
+    );
+  }
+
+  if (userStatus === "expired") {
+    return (
+      <CenterCard>
+        <h1 className="text-xl font-semibold text-red-600">หมดเวลาชำระเงิน</h1>
+        <p className="text-sm text-gray-500">Order: {masterOrderId}</p>
       </CenterCard>
     );
   }
@@ -66,7 +98,7 @@ export default function ClientResult({ orderId }: { orderId: string }) {
   return (
     <CenterCard>
       <h1 className="text-xl font-semibold">กำลังตรวจสอบสถานะการชำระเงิน…</h1>
-      <p className="text-sm text-gray-500">Order: {orderId}</p>
+      <p className="text-sm text-gray-500">Order: {masterOrderId}</p>
     </CenterCard>
   );
 }
