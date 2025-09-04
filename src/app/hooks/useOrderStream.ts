@@ -1,23 +1,15 @@
 // app/hooks/useOrderStream.ts
 "use client";
 
+import { MasterStatus } from "@/lib/helpers/order/order-base.types";
 import { BuyerOrderDetail } from "@/lib/helpers/orderDetail";
 import * as React from "react";
 
-type OrderStatus =
-    | "pending_payment"
-    | "paying"
-    | "processing"
-    | "paid"
-    | "shipped" // << เพิ่ม
-    | "delivered" // << เพิ่ม
-    | "expired"
-    | "canceled";
 
-const FINAL = new Set<OrderStatus>(["paid", "canceled", "expired"]);
+const FINAL = new Set<MasterStatus>(["paid", "canceled", "expired"]);
 
 export function useOrderStream(masterOrderId: string) {
-    const [userStatus, setUserStatus] = React.useState<OrderStatus>("pending_payment");
+    const [userStatus, setUserStatus] = React.useState<MasterStatus>("pending_payment");
     const [info, setInfo] = React.useState<BuyerOrderDetail | null>(null);
     const [error, setError] = React.useState<string | null>(null);
 
@@ -31,10 +23,10 @@ export function useOrderStream(masterOrderId: string) {
         const data: BuyerOrderDetail = (await res.json());
         console.log(data,'data');
         
-        setUserStatus(data.userStatus);
+        setUserStatus(data.buyerStatus);
         setInfo({
             masterOrderId: data.masterOrderId,
-            userStatus: data.userStatus,
+            buyerStatus: data.buyerStatus,
             createdAt: data.createdAt,
             currency: data.currency,
             payment: data.payment,
@@ -45,7 +37,7 @@ export function useOrderStream(masterOrderId: string) {
             stores: data.stores,
         });
 
-        return data.userStatus;
+        return data.buyerStatus;
     }, [apiBase, masterOrderId]);
 
     React.useEffect(() => {

@@ -30,7 +30,7 @@ export default function ProfilePage() {
   const handleSave = async () => {
     try {
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/auth/update`,
+        `${process.env.NEXT_PUBLIC_API_URL}/user/update`,
         {
           method: "PUT",
           credentials: "include",

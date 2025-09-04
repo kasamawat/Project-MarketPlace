@@ -4,6 +4,7 @@ import {
   ChevronRight,
   ChevronDown,
   Menu,
+  MapPinHouse,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -26,7 +27,25 @@ type Item = {
 };
 
 const items: Item[] = [
-  { href: "/account/profile", label: "My Account", icon: User },
+  {
+    href: "/account/detail/profile",
+    label: "My Account",
+    icon: User,
+    submenu: [
+      {
+        href: "/account/detail/profile",
+        label: "Profile",
+        icon: User,
+        disable: false,
+      },
+      {
+        href: "/account/detail/address",
+        label: "Address",
+        icon: MapPinHouse,
+        disable: false,
+      },
+    ],
+  },
   { href: "/account/orders", label: "My Orders", icon: PackageOpen },
 ];
 

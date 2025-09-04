@@ -26,7 +26,7 @@ function fmtMMSS(ms: number) {
   return `${mm}:${ss}`;
 }
 
-function StatusBadge({ status }: { status: BuyerOrderDetail["userStatus"] }) {
+function StatusBadge({ status }: { status: BuyerOrderDetail["buyerStatus"] }) {
   const map: Record<string, string> = {
     pending_payment: "bg-amber-100 text-amber-800",
     paying: "bg-amber-100 text-amber-800",
@@ -50,10 +50,10 @@ function StatusBadge({ status }: { status: BuyerOrderDetail["userStatus"] }) {
 export default function ClientOrderDetail({ storeOrder }: Props) {
   const router = useRouter();
   const leftMs = useCountdown(storeOrder.reservationExpiresAt);
-  const isExpired = storeOrder.userStatus === "expired" || leftMs <= 0;
+  const isExpired = storeOrder.buyerStatus === "expired" || leftMs <= 0;
   const canPay =
     ["pending_payment", "paying", "processing"].includes(
-      storeOrder.userStatus
+      storeOrder.buyerStatus
     ) && !isExpired;
 
   const storePrice = storeOrder.stores[0].pricing ?? {
@@ -81,7 +81,7 @@ export default function ClientOrderDetail({ storeOrder }: Props) {
           </div>
         </div>
         <div className="mt-auto mb-auto">
-          <StatusBadge status={storeOrder.userStatus} />
+          <StatusBadge status={storeOrder.buyerStatus} />
           {/* <div className="text-sm text-gray-500">
             ชำระเงินเมื่อ {new Date(storeOrder.paidAt).toLocaleString()}
           </div> */}
@@ -99,7 +99,7 @@ export default function ClientOrderDetail({ storeOrder }: Props) {
         <div className="text-sm">
           {storeOrder.reservationExpiresAt &&
           !["paid", "failed", "canceled", "expired"].includes(
-            storeOrder.userStatus
+            storeOrder.buyerStatus
           ) ? (
             isExpired ? (
               <span className="text-red-500">การจองหมดอายุแล้ว</span>
@@ -235,7 +235,7 @@ export default function ClientOrderDetail({ storeOrder }: Props) {
                 >
                   ชำระเงินตอนนี้
                 </Link>
-              ) : storeOrder.userStatus === "paid" ? (
+              ) : storeOrder.buyerStatus === "paid" ? (
                 <Link
                   href={`/account/orders/${storeOrder.masterOrderId}/invoice`}
                   className="mt-2 inline-flex w-full items-center justify-center rounded-md border border-gray-600 px-4 py-2 text-gray-100 hover:bg-gray-800"

@@ -1,20 +1,27 @@
 "use client";
-import { buildStoreOrdersQS } from "@/lib/helpers/store-order-helper";
-import { fulfillmentStatus, SellerOrderListItem } from "@/lib/helpers/store-order.dto";
+import {
+  buildStoreOrdersQS,
+  SellerTabKey,
+} from "@/lib/helpers/store-order-helper";
+import {
+  fulfillmentStatus,
+  SellerOrderListItem,
+} from "@/lib/helpers/store-order.dto";
 import Link from "next/link";
 import * as React from "react";
 
 const SELLER_TABS = [
-  { key: "pending", label: "Pending" }, // = PENDING,PACKED
-  { key: "awaiting_payment", label: "Wait Pay" },
-  { key: "shipped", label: "Shipped" },
-  { key: "delivered", label: "Delivered" },
-  { key: "canceled", label: "Canceled" },
-  { key: "expired", label: "Expired" },
-  { key: "all", label: "All" },
+  { key: "pending", label: "Pending" },              // buyerStatus=paid & storeStatus in [PENDING, PACKED]
+  { key: "awaiting_payment", label: "Wait Pay" },    // buyerStatus=pending_payment
+  { key: "packed", label: "Packed" },                // buyerStatus=paid & storeStatus=SHIPPED
+  { key: "shipped", label: "Shipped" },              // buyerStatus=paid & storeStatus=SHIPPED
+  { key: "delivered", label: "Delivered" },          // buyerStatus=paid & storeStatus=DELIVERED
+  { key: "canceled", label: "Canceled" },            // buyerStatus=canceled
+  { key: "expired", label: "Expired" },              // buyerStatus=expired
+  { key: "all", label: "All" },                      // ทั้งหมด (optionally filter paid)
 ] as const;
 
-function payBadge(s: SellerOrderListItem["status"]) {
+function payBadge(s: SellerOrderListItem["buyerStatus"]) {
   const map: Record<string, string> = {
     pending_payment: "bg-amber-100 text-amber-800",
     paying: "bg-amber-100 text-amber-800",
@@ -39,8 +46,7 @@ function fulfillBadge(s: fulfillmentStatus) {
 
 export default function ClientStoreOrders() {
   const api = process.env.NEXT_PUBLIC_API_URL!;
-  const [tab, setTab] =
-    React.useState<(typeof SELLER_TABS)[number]["key"]>("pending");
+  const [tab, setTab] = React.useState<SellerTabKey>("pending");
   const [page, setPage] = React.useState(1);
   const [items, setItems] = React.useState<SellerOrderListItem[]>([]);
   const [total, setTotal] = React.useState(0);
@@ -63,8 +69,7 @@ export default function ClientStoreOrders() {
     setTotal(data.total);
   }, [api, tab, page]);
 
-  console.log(items,'items');
-  
+  console.log(items, "items");
 
   React.useEffect(() => {
     load();
@@ -128,8 +133,7 @@ export default function ClientStoreOrders() {
                 .join(", ");
               const more = o.itemsCount - o.itemsPreview.length;
 
-              const canFulfill =
-                o.status === "paid" || o.status === "processing";
+              const canFulfill = o.buyerStatus === "paid";
               const isShippedOrDone = ["FULFILLED"].includes(
                 o?.fulfillment?.status ?? "UNFULFILLED"
               );
@@ -165,16 +169,14 @@ export default function ClientStoreOrders() {
                   </td>
 
                   <td className="px-4 py-3 border border-gray-700 text-center">
-                    <span className={`px-2 py-1 rounded ${payBadge(o.status)}`}>
-                      {o.status === "pending_payment"
-                        ? "Wait Pay"
-                        : o.status === "paying"
-                        ? "Paying"
-                        : o.status === "processing"
-                        ? "Checknig"
-                        : o.status === "paid"
+                    <span
+                      className={`px-2 py-1 rounded ${payBadge(o.buyerStatus)}`}
+                    >
+                      {o.buyerStatus === "pending_payment"
+                        ? "Pending Pay"
+                        : o.buyerStatus === "paid"
                         ? "Paid"
-                        : o.status === "expired"
+                        : o.buyerStatus === "expired"
                         ? "Expired"
                         : "Canceled"}
                     </span>

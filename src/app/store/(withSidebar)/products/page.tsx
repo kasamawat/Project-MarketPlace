@@ -400,7 +400,11 @@ export default function ProductList(): React.ReactElement {
                                         <td className="px-3 py-2 border border-gray-700 text-right">
                                           {fmtPrice(s.onHand) || "—"}
                                         </td>
-                                        <td className="px-3 py-2 border border-gray-700 text-right">
+                                        <td
+                                          className={`px-3 py-2 border border-gray-700 text-right ${
+                                            (s.reserved ?? 0) > 0 ? "text-amber-700 font-semibold" : ""
+                                          }`}
+                                        >
                                           {fmtPrice(s.reserved) || "—"}
                                         </td>
                                         <td

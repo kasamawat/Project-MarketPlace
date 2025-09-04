@@ -1,12 +1,4 @@
-type BuyerListStatus =
-  | "pending_payment"
-  | "paying"
-  | "processing"
-  | "paid"
-  | "shipped" // << เพิ่ม
-  | "delivered" // << เพิ่ม
-  | "expired"
-  | "canceled";
+import { MasterStatus, StoreStatus } from "./order/order-base.types";
 
 /* ===== Input types from aggregation ===== */
 export type FulfillStatus =
@@ -62,7 +54,7 @@ type TimelineItem = {
 type StoreOrderBriefOut = {
   storeOrderId: string;
   storeId: string;
-  status: "pending_payment" | "paid" | "expired" | "canceled";
+  buyerStatus: MasterStatus;
   pricing: { itemsTotal: number; grandTotal: number };
   items: StoreOrderItemView[];
   shipping: ShippingInfo;
@@ -73,7 +65,7 @@ export type BuyerOrderDetail = {
   masterOrderId: string;
   createdAt: string;
   currency: string;
-  userStatus: BuyerListStatus;
+  buyerStatus: MasterStatus;
   reservationExpiresAt?: string;
   payment?: {
     provider?: string;
@@ -103,13 +95,8 @@ type storesSummary = {
   storeOrderId: string;
   storeId: string;
   storeName: string;
-  storeStatus:
-  | "PENDING"
-  | "PACKED"
-  | "SHIPPED"
-  | "DELIVERED"
-  | "CANCELED"
-  | "RETURNED";
+  storeStatus: StoreStatus
+  buyerStatus: MasterStatus
   itemsCount: number;
   itemsTotal: number;
   itemsPreview: {
@@ -133,7 +120,7 @@ export type BuyerOrderListItem = {
   itemsCount: number;
   itemsTotal: number;
   currency: string;
-  userStatus: BuyerListStatus;
+  buyerStatus: MasterStatus;
   reservationExpiresAt?: string;
   storesSummary: storesSummary[];
 }

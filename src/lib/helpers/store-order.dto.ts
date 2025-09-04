@@ -1,9 +1,12 @@
+import { MasterStatus, StoreStatus } from "./order/order-base.types";
+
 export type fulfillmentStatus = | "UNFULFILLED"
   | "PARTIALLY_FULFILLED"
   | "FULFILLED"
   | "CANCELED"
   | "RETURNED";
 
+// Use for list sellter order
 export type SellerOrderListItem = {
   storeOrderId: string;
   createdAt: string;
@@ -15,13 +18,8 @@ export type SellerOrderListItem = {
   itemsCount: number;
   itemsTotal: number;
   currency: string;
-  status:
-  | "pending_payment"
-  | "paying"
-  | "processing"
-  | "paid"
-  | "canceled"
-  | "expired";
+  buyerStatus: MasterStatus
+  storeStatus: StoreStatus
   fulfillment: {
     status: fulfillmentStatus;
     shippedItems: number;
