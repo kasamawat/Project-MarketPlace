@@ -1,12 +1,11 @@
-import { getAllProducts } from "@/lib/products";
-import { Product } from "@/types/product/product.types";
 import Image from "next/image";
 import Link from "next/link";
 import ProductCard from "./ProductCard";
+import { PublicProduct } from "@/types/product/products.types";
 
 export default async function RecommendedItems() {
-  let products: Product[] = [];
-  products = await getAllProducts();
+  const products: PublicProduct[] = [];
+  // products = await getAllProducts();
   // สุ่มลำดับสินค้า แล้วเลือก 3 รายการแรก (แก้จำนวนได้ตามต้องการ)
   const shuffled = products
     .map((p) => ({ sort: Math.random(), value: p }))

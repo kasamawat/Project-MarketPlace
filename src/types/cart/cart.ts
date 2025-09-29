@@ -11,6 +11,18 @@ export type CartSkuRef = {
     purchasable?: boolean;
 };
 
+interface CartImageDto {
+  _id: string;
+  role: string;
+  order: number;
+  publicId: string;
+  version?: number;
+  width?: number;
+  height?: number;
+  format?: string;
+  url?: string;
+}
+
 export type CartItem = {
     productId: string;
     productName: string;
@@ -19,6 +31,7 @@ export type CartItem = {
     sku: CartSkuRef;
     quantity: number;          // จำนวนในตะกร้า
     subtotal: number;          // = price * quantity (คำนวณทุกรอบ)
+    cover: CartImageDto;
 };
 
 export type AddToCartArgs = {

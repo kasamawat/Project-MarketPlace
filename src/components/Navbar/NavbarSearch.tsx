@@ -1,13 +1,11 @@
 "use client";
 
-import { getAllProducts } from "@/lib/products";
-import { getAllStores } from "@/lib/stores";
-import { Product } from "@/types/product/product.types";
-import { Store } from "@/types/store.types";
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 type Result = { id: string; name: string; type: "product" | "store" };
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL; // NestJS base URL
 
 const NavbarSearch: React.FC = () => {
   const router = useRouter();
@@ -16,28 +14,13 @@ const NavbarSearch: React.FC = () => {
 
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [suggestions, setSuggestions] = useState<string[]>([]);
   const [searchResults, setSearchResults] = useState<Result[]>([]);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [stores, setStores] = useState<Store[]>([]);
+  const [loading, setLoading] = useState(false);
 
   const dropdownSearchRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [prod, str] = await Promise.all([
-          getAllProducts(),
-          getAllStores(),
-        ]);
-        setProducts(prod);
-        setStores(str);
-      } catch (error) {
-        console.error("Failed to fetch products or stores", error);
-      }
-    };
-
-    fetchData();
-  }, []);
+  const abortRef = useRef<AbortController | null>(null);
+  const debounceRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -49,57 +32,94 @@ const NavbarSearch: React.FC = () => {
         setIsSearchOpen(false);
       }
     };
-
     document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // เรียก suggest แบบ debounce
   const handleSearchChange = (value: string) => {
     setSearchTerm(value);
-
     const trimmed = value.trim();
-    if (trimmed === "") {
+
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (abortRef.current) abortRef.current.abort();
+
+    if (!trimmed) {
+      setSuggestions([]);
       setSearchResults([]);
       return;
     }
 
-    const term = trimmed.toLowerCase();
+    debounceRef.current = setTimeout(async () => {
+      abortRef.current = new AbortController();
+      const signal = abortRef.current.signal;
+      try {
+        setLoading(true);
+        const res = await fetch(
+          `${API_BASE}/search/suggest?q=${encodeURIComponent(trimmed)}`,
+          {
+            credentials: "include",
+            signal,
+          }
+        );
+        if (!res.ok) throw new Error("suggest failed");
+        const sugg: string[] = await res.json();
+        setSuggestions(sugg);
+        setIsSearchOpen(true);
 
-    const matchedStores = stores
-      .filter((s) => s.name.toLowerCase().includes(term))
-      .map((s) => ({ id: String(s.id), name: s.name, type: "store" as const }));
-
-    const matchedProducts = products
-      .filter((p) => p.name.toLowerCase().includes(term))
-      .map((p) => ({
-        id: String(p.id),
-        name: p.name,
-        type: "product" as const,
-      }));
-
-    setSearchResults([...matchedStores, ...matchedProducts]);
-    setIsSearchOpen(true);
+        // ยิงค้นหารายการ “ตัวอย่างผลลัพธ์” (optional preview) — ดึง products/stores อย่างละนิด
+        const res2 = await fetch(
+          `${API_BASE}/search?q=${encodeURIComponent(
+            trimmed
+          )}&type=all&page=1&limit=6`,
+          { credentials: "include", signal }
+        );
+        if (res2.ok) {
+          const data = await res2.json();
+          const items: Result[] = [
+            ...(data.stores?.items ?? []).map((s: any) => ({
+              id: String(s.storeId ?? s.id ?? s._id),
+              name: s.name,
+              type: "store" as const,
+            })),
+            ...(data.products?.items ?? []).map((p: any) => ({
+              id: String(p.productId ?? p.id ?? p._id),
+              name: p.name,
+              type: "product" as const,
+            })),
+          ];
+          setSearchResults(items);
+        } else {
+          setSearchResults([]);
+        }
+      } catch (_e) {
+        // เงียบ ๆ เมื่อโดน abort หรือเน็ตล้ม
+      } finally {
+        setLoading(false);
+      }
+    }, 250); // debounce ~250ms
   };
 
-  const handleSearch = () => {
+  const gotoSearchPage = () => {
     const query = searchTerm.trim();
     if (!query) return;
-
     const targetUrl = `/search?q=${encodeURIComponent(query)}`;
-    const currentUrl = pathname + "?" + searchParams.toString();
-
+    const currentUrl =
+      pathname + (searchParams.toString() ? "?" + searchParams.toString() : "");
     if (targetUrl === currentUrl) {
-      router.refresh(); // 🔁 reload page if same query
+      router.refresh();
     } else {
-      router.replace(targetUrl); // 🚀 navigate to new or same search
+      router.replace(targetUrl);
     }
+    setIsSearchOpen(false);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
-      handleSearch();
+      e.preventDefault();
+      gotoSearchPage();
+    } else if (e.key === "ArrowDown") {
+      // TODO: โฟกัสรายการถัดไปใน dropdown (ถ้าจะทำคีย์บอร์ดเนวิเกชัน)
     }
   };
 
@@ -111,25 +131,19 @@ const NavbarSearch: React.FC = () => {
       <input
         className="py-2 px-2 w-full bg-transparent outline-none placeholder-gray-500"
         type="text"
-        placeholder="Search ..."
+        placeholder="ค้นหาสินค้า/ร้าน…"
         value={searchTerm}
         onChange={(e) => handleSearchChange(e.target.value)}
         onFocus={() => setIsSearchOpen(true)}
-        onKeyDown={(e) => {
-          handleKeyDown(e);
-          setIsSearchOpen(false);
-        }}
+        onKeyDown={handleKeyDown}
       />
 
       <button
         className="cursor-pointer"
-        onClick={() => {
-          if (searchTerm.trim()) {
-            handleSearch();
-            setIsSearchOpen(false);
-          }
-        }}
+        onClick={gotoSearchPage}
+        disabled={!searchTerm.trim()}
       >
+        {/* ไอคอนค้นหาเหมือนเดิม */}
         <svg
           width="16"
           height="16"
@@ -155,28 +169,51 @@ const NavbarSearch: React.FC = () => {
         </svg>
       </button>
 
-      {isSearchOpen && searchResults.length > 0 && (
-        <div className="absolute top-full mt-1 left-0 w-full bg-gray-900 border border-gray-300 rounded-md shadow-lg z-50 max-h-60 overflow-auto">
-          {searchResults.map((result) => (
-            <div
-              key={`${result.type}-${result.id}`}
-              className="px-4 py-2 hover:bg-gray-700 cursor-pointer"
-              onClick={() => {
-                setSearchTerm(result.name);
-                setSearchResults([]);
-                setIsSearchOpen(false);
-
-                if (result.type === "product") {
-                  router.push(`/products/${result.id}`);
-                } else {
-                  router.push(`/stores/${result.id}`);
-                }
-              }}
-            >
-              <span className="font-medium">{result.name}</span>{" "}
-              <span className="text-xs text-gray-500">({result.type})</span>
+      {isSearchOpen && (suggestions.length > 0 || searchResults.length > 0) && (
+        <div className="absolute top-full mt-1 left-0 w-full bg-gray-900 border border-gray-300 rounded-md shadow-lg z-50 max-h-80 overflow-auto">
+          {/* แถบคำแนะนำ (suggest) */}
+          {suggestions.length > 0 && (
+            <div className="p-2 border-b border-gray-700">
+              <div className="text-xs text-gray-400 mb-1">คำแนะนำ</div>
+              <div className="flex flex-wrap gap-2">
+                {suggestions.map((s) => (
+                  <button
+                    key={s}
+                    className="px-2 py-1 bg-gray-800 hover:bg-gray-700 rounded text-xs"
+                    onClick={() => {
+                      handleSearchChange(s);
+                    }}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
             </div>
-          ))}
+          )}
+
+          {/* ตัวอย่างผลลัพธ์ (preview) */}
+          {searchResults.length > 0 && (
+            <div className="py-1">
+              {searchResults.map((r) => (
+                <div
+                  key={`${r.type}-${r.id}`}
+                  className="px-4 py-2 hover:bg-gray-700 cursor-pointer flex items-center justify-between"
+                  onClick={() => {
+                    setIsSearchOpen(false);
+                    if (r.type === "product") router.push(`/products/${r.id}`);
+                    else router.push(`/stores/${r.id}`);
+                  }}
+                >
+                  <span className="font-medium">{r.name}</span>
+                  <span className="text-xs text-gray-500">({r.type})</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {loading && (
+            <div className="px-4 py-2 text-xs text-gray-400">กำลังค้นหา…</div>
+          )}
         </div>
       )}
     </div>

@@ -1,3 +1,4 @@
+import { ImageItemDto } from "@/types/product/products.types";
 import { MasterStatus, StoreStatus } from "./order/order-base.types";
 
 export type fulfillmentStatus = | "UNFULFILLED"
@@ -14,6 +15,7 @@ export type SellerOrderListItem = {
     name: string;
     qty: number;
     attributes?: Record<string, string>;
+    cover: ImageItemDto; 
   }[];
   itemsCount: number;
   itemsTotal: number;

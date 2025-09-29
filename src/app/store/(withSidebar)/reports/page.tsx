@@ -1,7 +1,9 @@
 // src/app/store/(withSidebar)/reports/page.tsx
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { attrsToText } from "@/lib/helpers/productList";
+import { FulfillmentStatus } from "@/types/order/order.types";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 type Summary = {
   revenue: number; // รายได้รวม
@@ -10,10 +12,14 @@ type Summary = {
 };
 
 type TopProduct = {
-  id: string;
+  productId: string;
+  skuId: string;
   name: string;
+  attributes: Record<string, string>;
+  fulfillStatus: FulfillmentStatus;
   qty: number;
   revenue: number;
+  deliveredAt: string;
 };
 
 type ReportResponse = {
@@ -23,6 +29,20 @@ type ReportResponse = {
 
 type RangePreset = "today" | "7d" | "30d" | "custom";
 
+const API = process.env.NEXT_PUBLIC_API_URL!;
+
+function toYMD(d: Date) {
+  // แปลงเป็น YYYY-MM-DD (ใช้ local TZ)
+  const z = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}`;
+}
+
+function addDays(base: Date, days: number) {
+  const d = new Date(base);
+  d.setDate(d.getDate() + days);
+  return d;
+}
+
 export default function ReportsPage() {
   const [preset, setPreset] = useState<RangePreset>("7d");
   const [from, setFrom] = useState<string>(""); // YYYY-MM-DD
@@ -30,99 +50,135 @@ export default function ReportsPage() {
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<ReportResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
+  console.log(data, "data");
 
-  // สร้างช่วงวันที่ตาม preset
-  const params = useMemo(() => {
-    const url = new URLSearchParams();
-    if (preset !== "custom") {
-      url.set("preset", preset);
-    } else {
-      if (from) url.set("from", from);
-      if (to) url.set("to", to);
+  // กำหนดค่า from/to อัตโนมัติเมื่อ preset เปลี่ยน (ยกเว้น custom)
+  useEffect(() => {
+    if (preset === "custom") return;
+    const today = new Date();
+    if (preset === "today") {
+      const ymd = toYMD(today);
+      setFrom(ymd);
+      setTo(ymd);
+    } else if (preset === "7d") {
+      setFrom(toYMD(addDays(today, -6)));
+      setTo(toYMD(today));
+    } else if (preset === "30d") {
+      setFrom(toYMD(addDays(today, -29)));
+      setTo(toYMD(today));
     }
-    return url;
+  }, [preset]);
+
+  // validate ช่วงวันที่ (เฉพาะ custom)
+  const dateError = useMemo(() => {
+    if (preset !== "custom") return null;
+    if (!from || !to) return "Please select both From and To.";
+    if (new Date(from) > new Date(to)) return "From must be before To.";
+    return null;
   }, [preset, from, to]);
 
+  // query params ที่จะยิงจริง (จากช่วงวันที่ที่คำนวณแล้ว)
+  const searchParams = useMemo(() => {
+    const url = new URLSearchParams();
+    url.set("from", from);
+    url.set("to", to);
+    // ถ้ามี timezone ฝั่ง BE อยากได้ส่งเพิ่ม เช่น Asia/Bangkok
+    // url.set("tz", "Asia/Bangkok");
+    return url;
+  }, [from, to]);
+
+  // แสดงช่วงวันที่สรุป
+  const dateLabel = useMemo(() => {
+    if (!from || !to) return "-";
+    return from === to ? from : `${from} → ${to}`;
+  }, [from, to]);
+
+  // โหลดข้อมูลทุกครั้งที่ช่วงวันเปลี่ยน
   useEffect(() => {
-    // โหลดข้อมูลเมื่อ filter เปลี่ยน
-    let mounted = true;
+    if (!from || !to) return; // ยังไม่พร้อม
+    if (preset === "custom" && dateError) return; // invalid
+
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     (async () => {
       setLoading(true);
       setError(null);
       try {
-        // TODO: เปลี่ยนเป็น endpoint จริงของคุณ เช่น /store/reports
         const res = await fetch(
-          `${
-            process.env.NEXT_PUBLIC_API_URL
-          }/store/reports?${params.toString()}`,
-          { credentials: "include", cache: "no-store" }
+          `${API}/store/reports?${searchParams.toString()}`,
+          {
+            credentials: "include",
+            cache: "no-store",
+            signal: controller.signal,
+          }
         );
 
-        // ชั่วคราว: mock ถ้า endpoint ยังไม่พร้อม
         let payload: ReportResponse;
         if (!res.ok) {
-          // mock
+          // mock (ลบทิ้งได้เมื่อ BE พร้อม)
           payload = {
-            summary: { revenue: 123456, orders: 42, aov: 2939.43 },
-            topProducts: [
-              { id: "P001", name: "Almond Granola", qty: 120, revenue: 36000 },
-              { id: "P002", name: "Greek Yogurt", qty: 95, revenue: 28500 },
-              { id: "P003", name: "Protein Bar", qty: 80, revenue: 24000 },
-            ],
+            summary: { revenue: 0, orders: 0, aov: 0 },
+            topProducts: [],
           };
         } else {
-          payload = await res.json();
+          payload = (await res.json()) as ReportResponse;
         }
-
-        if (mounted) setData(payload);
+        setData(payload);
       } catch (e) {
-        if (mounted) setError("Failed to load report");
+        if ((e as Error)?.name !== "AbortError") {
+          setError("Failed to load report");
+          setData(null);
+        }
       } finally {
-        if (mounted) setLoading(false);
+        setLoading(false);
       }
     })();
-    return () => {
-      mounted = false;
-    };
-  }, [params]);
+
+    return () => controller.abort();
+  }, [API, searchParams, preset, dateError]);
 
   const formatTHB = (n: number) =>
     `฿${n.toLocaleString("en-US", { maximumFractionDigits: 2 })}`;
 
   const handleExport = async () => {
     try {
-      // TODO: เปลี่ยนเป็น endpoint export ของคุณ เช่น /store/reports/export
       const res = await fetch(
-        `${
-          process.env.NEXT_PUBLIC_API_URL
-        }/store/reports/export?${params.toString()}`,
+        `${API}/store/reports/export?${searchParams.toString()}`,
         { credentials: "include" }
       );
       if (!res.ok) throw new Error(`Export failed (HTTP ${res.status})`);
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
+      const filenameSuffix = from && to ? `${from}_${to}` : preset;
       a.href = url;
-      a.download = `reports_${
-        preset === "custom" ? `${from}_${to}` : preset
-      }.csv`;
+      a.download = `reports_${filenameSuffix}.csv`;
       a.click();
       URL.revokeObjectURL(url);
-    } catch (e) {
+    } catch {
       alert("Export failed");
     }
   };
+
+  const presets: RangePreset[] = ["today", "7d", "30d", "custom"];
 
   return (
     <div className="p-6">
       <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold text-white">Reports</h1>
-          <p className="text-sm text-gray-400">Sales performance overview</p>
+          <p className="text-sm text-gray-400">
+            Sales performance overview &nbsp;
+            <span className="text-gray-300">({dateLabel})</span>
+          </p>
         </div>
         <button
           onClick={handleExport}
           className="rounded bg-indigo-600 px-4 py-2 text-sm text-white hover:bg-indigo-700"
+          disabled={!from || !to || !!dateError}
         >
           Export CSV
         </button>
@@ -131,12 +187,12 @@ export default function ReportsPage() {
       {/* Filters */}
       <div className="mb-6 flex flex-wrap items-center gap-3">
         <div className="flex items-center gap-2">
-          {(["today", "7d", "30d", "custom"] as RangePreset[]).map((r) => (
+          {presets.map((r) => (
             <button
               key={r}
               onClick={() => setPreset(r)}
               className={[
-                "rounded px-3 py-1.5 text-sm",
+                "rounded px-3 py-1.5 text-sm capitalize",
                 preset === r
                   ? "bg-gray-300 text-black"
                   : "border border-gray-700 text-gray-300 hover:bg-gray-800",
@@ -155,24 +211,27 @@ export default function ReportsPage() {
 
         {preset === "custom" && (
           <div className="flex items-center gap-2">
-            <div className="flex items-center gap-2">
-              <label className="text-sm text-gray-300">From</label>
+            <label className="text-sm text-gray-300">
+              From
               <input
                 type="date"
                 value={from}
                 onChange={(e) => setFrom(e.target.value)}
-                className="rounded border border-gray-700 bg-gray-950 p-2 text-gray-100"
+                className="ml-2 rounded border border-gray-700 bg-gray-950 p-2 text-gray-100"
               />
-            </div>
-            <div className="flex items-center gap-2">
-              <label className="text-sm text-gray-300">To</label>
+            </label>
+            <label className="text-sm text-gray-300">
+              To
               <input
                 type="date"
                 value={to}
                 onChange={(e) => setTo(e.target.value)}
-                className="rounded border border-gray-700 bg-gray-950 p-2 text-gray-100"
+                className="ml-2 rounded border border-gray-700 bg-gray-950 p-2 text-gray-100"
               />
-            </div>
+            </label>
+            {dateError && (
+              <span className="text-xs text-red-300 ml-2">{dateError}</span>
+            )}
           </div>
         )}
       </div>
@@ -182,19 +241,19 @@ export default function ReportsPage() {
         <div className="rounded border border-gray-800 bg-gray-900 p-4">
           <div className="text-sm text-gray-400">Revenue</div>
           <div className="mt-1 text-2xl font-bold text-white">
-            {data ? formatTHB(data.summary.revenue) : "--"}
+            {data ? formatTHB(data.summary.revenue) : loading ? "…" : "--"}
           </div>
         </div>
         <div className="rounded border border-gray-800 bg-gray-900 p-4">
           <div className="text-sm text-gray-400">Orders</div>
           <div className="mt-1 text-2xl font-bold text-white">
-            {data ? data.summary.orders.toLocaleString() : "--"}
+            {data ? data.summary.orders.toLocaleString() : loading ? "…" : "--"}
           </div>
         </div>
         <div className="rounded border border-gray-800 bg-gray-900 p-4">
           <div className="text-sm text-gray-400">AOV</div>
           <div className="mt-1 text-2xl font-bold text-white">
-            {data ? formatTHB(data.summary.aov) : "--"}
+            {data ? formatTHB(data.summary.aov) : loading ? "…" : "--"}
           </div>
         </div>
       </div>
@@ -218,25 +277,42 @@ export default function ReportsPage() {
               </tr>
             )}
 
-            {!loading &&
-              data?.topProducts.map((p) => (
-                <tr
-                  key={p.id}
-                  className="border-b border-gray-800 hover:bg-gray-800/40"
-                >
-                  <td className="px-4 py-2">{p.name}</td>
-                  <td className="px-4 py-2">{p.qty.toLocaleString()}</td>
-                  <td className="px-4 py-2">{formatTHB(p.revenue)}</td>
-                </tr>
-              ))}
-
-            {!loading && !data && (
-              <tr>
-                <td colSpan={3} className="px-4 py-6 text-center text-gray-400">
-                  No data
-                </td>
-              </tr>
-            )}
+            {!loading && data?.topProducts?.length
+              ? data.topProducts.map((p) => (
+                  <tr
+                    key={`${p.productId}::${p.skuId}`}
+                    className="border-b border-gray-800 hover:bg-gray-800/40"
+                  >
+                    <td className="px-4 py-2">
+                      <div>
+                        <div>{p.name}</div>
+                        <div className="text-gray-400 text-xs">
+                          {attrsToText(p.attributes)}
+                        </div>
+                        <div className="text-gray-400 text-xs">
+                          deliveredAt: {p.deliveredAt
+                            ? new Date(p.deliveredAt).toLocaleString("th-TH", {
+                                dateStyle: "short",
+                                timeStyle: "short",
+                              })
+                            : "-"}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-2">{p.qty.toLocaleString()}</td>
+                    <td className="px-4 py-2">{formatTHB(p.revenue)}</td>
+                  </tr>
+                ))
+              : !loading && (
+                  <tr>
+                    <td
+                      colSpan={3}
+                      className="px-4 py-6 text-center text-gray-400"
+                    >
+                      No data
+                    </td>
+                  </tr>
+                )}
           </tbody>
         </table>
       </div>

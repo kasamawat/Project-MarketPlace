@@ -8,6 +8,7 @@ import {
 } from "@/lib/helpers/order/seller/store-order-detail";
 import { attrsToText } from "@/lib/helpers/productList";
 import { StoreStatus } from "@/lib/helpers/order/order-base.types";
+import Image from "next/image";
 
 // --- Helpers ---
 const fmtBaht = (n: number | undefined, currency = "THB"): string => {
@@ -143,13 +144,6 @@ export default function OrderDetailPage({
         <div>
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold">Order #{data.storeOrderId}</h1>
-            {/* <span
-              className={`px-2 py-1 text-xs font-medium rounded ${badgeClassByStatus(
-                data.code
-              )}`}
-            >
-              {data.code}
-            </span> */}
             {data.buyerStatus && (
               <span
                 className={`px-2 py-1 text-xs font-medium rounded ${badgeClassByStatus(
@@ -216,12 +210,13 @@ export default function OrderDetailPage({
                   className="flex items-start gap-4 p-4"
                 >
                   {/* image */}
-                  {it.imageUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={it.imageUrl}
+                  {it.cover.url ? (
+                    <Image
+                      src={it?.cover?.url || "/no-image.png"}
                       alt={it.name}
-                      className="h-16 w-16 rounded object-cover border"
+                      width={160}
+                      height={224}
+                      className="h-25 w-25 rounded object-cover border"
                     />
                   ) : (
                     <div className="h-16 w-16 rounded bg-gray-100 border flex items-center justify-center text-xs text-gray-500">
@@ -366,7 +361,9 @@ export default function OrderDetailPage({
                             {fmtDateTime(t.at)}
                           </div>
                           {t.type && (
-                            <div className="text-gray-600 mt-0.5">{String(t.payload)}</div>
+                            <div className="text-gray-600 mt-0.5">
+                              {JSON.stringify(t.payload?.note)}
+                            </div>
                           )}
                         </div>
                       </div>

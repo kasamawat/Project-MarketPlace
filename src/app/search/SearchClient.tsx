@@ -1,122 +1,126 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
-// import { useRouter } from "next/navigation";
-import ProductCard from "@/components/ProductCard";
-import { Product } from "@/types/product/product.types";
-import { getAllProducts } from "@/lib/products";
-import { getAllStores } from "@/lib/stores";
-import { Store } from "@/types/store.types";
 import Image from "next/image";
-
-type SearchResult = {
-  id: string;
-  name: string;
-  type: "product" | "store";
-};
+import Link from "next/link";
+import ProductCard from "@/components/ProductCard";
+import React from "react";
+import { StorePubilc } from "@/types/store/stores.types";
+import { ImageItemDto } from "@/types/product/products.types";
 
 type Props = {
   initialTerm: string;
-  initialResults: SearchResult[];
+  initialProducts: {
+    items: {
+      name: string;
+      price: number;
+      productId: string;
+      storeId: string;
+      cover: ImageItemDto;
+    }[];
+    total: number;
+  };
+  initialStores: { items: StorePubilc[]; total: number };
 };
 
-export default function SearchClient({ initialTerm, initialResults }: Props) {
-  const [results, setResults] = useState(initialResults);
-  console.log(results, "results");
-  // const products: Product[] = [];
-  const [products, setProducts] = useState<Product[]>([]);
-  const [stores, setStores] = useState<Store[]>([]);
+export default function SearchClient({
+  initialTerm,
+  initialProducts,
+  initialStores,
+}: Props): React.ReactElement {
+  if (!initialTerm) {
+    return (
+      <div className="max-w-4xl mx-auto p-4 text-gray-400">
+        พิมพ์คำค้นหาเพื่อเริ่มต้น
+      </div>
+    );
+  }
 
-  useEffect(() => {
-    async function fetchProducts() {
-      const allProducts = await getAllProducts();
-      const matched = results
-        .filter((x) => x.type === "product")
-        .map((x) => allProducts.find((p) => p.id === x.id))
-        .filter((p): p is Product => !!p); // filter out undefined
-      setProducts(matched);
-    }
+  if (
+    !initialProducts ||
+    !initialStores ||
+    (initialProducts.total === 0 && initialStores.total === 0)
+  ) {
+    return (
+      <div className="max-w-4xl mx-auto p-4 text-gray-400">
+        ไม่พบผลลัพธ์สำหรับ “{initialTerm}”
+      </div>
+    );
+  }
 
-    async function fetchStores() {
-      const allStores = await getAllStores();
-      const matched = results
-        .filter((x) => x.type === "store")
-        .map((x) => allStores.find((p) => p.id === x.id))
-        .filter((p): p is Store => !!p);
-      setStores(matched);
-    }
+  const products = initialProducts.items;
+  console.log(products, "products");
 
-    fetchProducts();
-    fetchStores();
-  }, [results]);
-
-  useEffect(() => {
-    // Optional: refetch if term changes (เช่นเรียก API ใหม่)
-    setResults(initialResults);
-  }, [initialTerm]);
+  const stores = initialStores.items;
 
   return (
-    <div className="max-w-3xl mx-auto p-4">
-      <div>
-        {/* <h2 className="text-lg font-semibold mb-2">
-          Results for: <span className="text-blue-500">{initialTerm}</span>
-        </h2> */}
+    <div className="max-w-6xl mx-auto p-4">
+      {/* Facets (ถ้ามี) – คุณจะ map facets ที่ initialData.products.facets มาด้านข้างได้ */}
+      <div className="grid grid-cols-12 gap-6">
+        <aside className="hidden lg:block col-span-3">
+          {/* TODO: Facets UI */}
+        </aside>
 
-        {results.length === 0 ? (
-          <p className="text-gray-400">No results found.</p>
-        ) : (
-          <div>
-            {stores.length > 0 ? (
-              <div className="mb-4">
-                <p className="mb-4">
-                  ร้านค้าที่เกี่ยวข้องกับ {'"' + initialTerm + '"'}
-                </p>
-                <ul className="space-y-2">
-                  {stores.map((item) => (
-                    <li key={item.id}>
-                      <Link
-                        href={`/stores/${item.id}`}
-                        className="block p-3 bg-gray-800 rounded-md hover:bg-gray-700"
-                      >
-                        <div className="grid grid-cols-4 gap-4">
-                          <div className="col-span-1 flex flex-col items-center text-md font-medium">
-                            <Image
-                              src={item.bannerUrl ?? "/default-banner.png"}
-                              alt={item.name}
-                              width={80}
-                              height={80}
-                              className="object-cover rounded mr-4 ml-4 mt-2 mb-2 border border-solid border-gray-600 rounded-full"
-                            />
-                            <div className="mt-2 text-center">{item.name}</div>
-                          </div>
-                          <div className="col-span-3 font-medium">|TEST|</div>
+        <main className="col-span-12 lg:col-span-9 space-y-8">
+          {stores.length > 0 && (
+            <section>
+              <h2 className="mb-3 font-semibold">
+                ร้านค้าที่เกี่ยวข้องกับ “{initialTerm}”
+              </h2>
+              <ul className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {stores.map((s) => (
+                  <li key={s._id}>
+                    <Link
+                      href={`/stores/${s._id}`}
+                      className="block p-3 bg-gray-800 rounded-md hover:bg-gray-700"
+                    >
+                      <div className="flex items-center gap-3">
+                        <Image
+                          src={s.logoUrl ?? "/default-banner.png"}
+                          alt={s.name}
+                          width={72}
+                          height={72}
+                          className="object-cover rounded-full border border-gray-600"
+                        />
+                        <div>
+                          <div className="font-medium">{s.name}</div>
+                          {/* province/rating ฯลฯ */}
                         </div>
+                      </div>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
 
-                        {/* <div className="text-sm text-gray-400">{item.type}</div> */}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : (
-              <></>
-            )}
-
+          <section>
+            <div className="text-gray-400">
+              ผลลัพธ์สำหรับ “{initialTerm}”
+            </div>
+            <h2 className="mb-3 font-semibold">สินค้า</h2>
             {products.length > 0 ? (
-              <div>
-                <p className="mb-4">ค้นหา {'"' + initialTerm + '"'}</p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {products.map((product) => (
-                    <ProductCard key={product.id} product={product} />
-                  ))}
-                </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {products.map((p) => (
+                  <ProductCard
+                    key={p.productId}
+                    product={{
+                      _id: p.productId,
+                      name: p.name,
+                      priceTo: p.price,
+                      skuCount: p.skuCount,
+                      cover: p.cover,
+                      // thumbnail: p.thumbnail,
+                      // rating: p.rating,
+                      // ... map field ที่การ์ดใช้
+                    }}
+                  />
+                ))}
               </div>
             ) : (
-              <></>
+              <div className="text-gray-400">ไม่มีสินค้า</div>
             )}
-          </div>
-        )}
+          </section>
+        </main>
       </div>
     </div>
   );

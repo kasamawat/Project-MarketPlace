@@ -3,14 +3,18 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { JwtPayload } from "@/models/JwtPayload";
+import { User } from "@/types/user/user.types";
+import Image from "next/image";
 
 type Props = {
   user: JwtPayload;
+  userDetail: User | null;
   onLogout: () => void;
 };
 
 export default function NavbarAccount({
   user,
+  userDetail,
   onLogout,
 }: Props): React.ReactElement {
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -51,9 +55,31 @@ export default function NavbarAccount({
     <div ref={dropdownAccountRef} className="relative inline-block text-left">
       <button
         onClick={toggleDropdown}
-        className="cursor-pointer px-5 py-2 bg-gray-500 hover:bg-gray-600 transition text-white rounded-full flex"
+        className="flex items-center gap-2 cursor-pointer rounded-full bg-gray-500 px-4 py-2 text-white transition hover:bg-gray-600"
       >
-        <p className="mr-2">{user ? user.username : "Account"}</p>
+        {/* Avatar */}
+        <span className="relative h-8 w-8 overflow-hidden rounded-full ring-1 ring-white/10 bg-gray-700">
+          {userDetail?.avatarUrl ? (
+            <Image
+              src={userDetail.avatarUrl}
+              alt={`${user?.username || "Account"} avatar`}
+              fill
+              sizes="32px"
+              className="object-cover"
+            />
+          ) : (
+            <span className="flex h-full w-full items-center justify-center text-xs text-gray-300">
+              {(user?.username?.[0] || "A").toUpperCase()}
+            </span>
+          )}
+        </span>
+
+        {/* Username */}
+        <span className="truncate text-sm font-medium flex-1 max-w-[72px]">
+          {user ? user.username : "Account"}
+        </span>
+
+        {/* Dropdown Icon */}
         <svg
           xmlns="http://www.w3.org/2000/svg"
           width="24"
@@ -75,10 +101,16 @@ export default function NavbarAccount({
 
       {dropdownOpen && (
         <div className="absolute right-0 mt-7 w-48 bg-gray-900 shadow-lg rounded-lg p-4 z-50">
-          <Link href="/account/detail/profile" className="block px-4 py-2 hover:bg-gray-800">
+          <Link
+            href="/account/detail/profile"
+            className="block px-4 py-2 hover:bg-gray-800"
+          >
             My Account
           </Link>
-          <Link href="/account/orders" className="block px-4 py-2 hover:bg-gray-800">
+          <Link
+            href="/account/orders"
+            className="block px-4 py-2 hover:bg-gray-800"
+          >
             My Orders
           </Link>
 

@@ -47,14 +47,18 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
     skus = await resSkus.json();
   }
 
-  const product: ProductDetailResponse = await resProduct.json();
+  console.log(skus,'skus');
+  
 
+  const product: ProductDetailResponse = await resProduct.json();
+  console.log(product,"product");
+  
   // map → ProductEditorState (ให้ ProductEditor ใช้ต่อ)
   const initialProduct: ProductEditorState = {
     _id: product._id,
     name: product.name,
     description: product.description,
-    image: product.image,
+    // image: product.cover?.url,
     category: product.category,
     type: product.type,
     defaultPrice: product.defaultPrice,
@@ -66,7 +70,11 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
       price: s.price,
       image: s.image,
       purchasable: s.purchasable ?? true,
+      cover: s.cover,
+      images: s.images
     })),
+    cover: product.cover,
+    images: product.images,
   };
   
   console.log(initialProduct,'initialProduct');

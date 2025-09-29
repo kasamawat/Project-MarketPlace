@@ -1,27 +1,27 @@
 // contexts/UserContext.tsx
 "use client";
 
-import { IUser } from "@/models/User";
+import { User } from "@/types/user/user.types";
 import { createContext, useContext, useEffect, useState } from "react";
 
 
 interface UserContextType {
-  user: IUser | null;
-  setUser: (user: IUser | null) => void;
+  userDetail: User | null;
+  setUserDetail: (userDetail: User | null) => void;
 }
 
 const UserContext = createContext<UserContextType>({
-  user: null,
-  setUser: () => {},
+  userDetail: null,
+  setUserDetail: () => {},
 });
 
 export const UserProvider = ({ children }: { children: React.ReactNode }) => {
-  const [user, setUser] = useState<IUser | null>(null);
+  const [userDetail, setUserDetail] = useState<User | null>(null);
 
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/getProfile`, {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/getProfileSecure`, {
           method: "GET",
           credentials: "include",
         });
@@ -29,10 +29,10 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
         if (res.ok) {
           const data = await res.json();
 
-          setUser(data.user);
+          setUserDetail(data);
         }
       } catch (err) {
-        setUser(null);
+        setUserDetail(null);
       }
     };
 
@@ -40,7 +40,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   return (
-    <UserContext.Provider value={{ user, setUser }}>
+    <UserContext.Provider value={{ userDetail, setUserDetail }}>
       {children}
     </UserContext.Provider>
   );

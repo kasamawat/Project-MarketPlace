@@ -112,6 +112,7 @@ export default function ClientCart() {
                                 name: item?.store?.name || "",
                               },
                               skuCount: 1, // ไม่ได้ใช้ใน Cart แต่ต้องมี
+                              cover: item.cover,
                             },
                             sku: { _id: item.sku.skuId, ...item.sku },
                             quantity: -1,
@@ -133,13 +134,14 @@ export default function ClientCart() {
                             product: {
                               _id: item.productId,
                               name: item.productName,
-                              image: item.productImage,
+                              image: item.productImage || item.cover?.url,
                               store: {
                                 _id: String(item.store?.id),
                                 slug: item?.store?.slug,
                                 name: item?.store?.name || "",
                               },
                               skuCount: 1, // ไม่ได้ใช้ใน Cart แต่ต้องมี
+                              cover: item.cover,
                             },
                             sku: { _id: item.sku.skuId, ...item.sku },
                             quantity: 1,

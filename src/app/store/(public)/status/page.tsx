@@ -5,14 +5,22 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
-type StoreStatus = "pending" | "approved" | "rejected";
-
-interface StoreData {
+type StoreDetail = {
+  _id: string;
   name: string;
   slug: string;
-  status: StoreStatus;
-}
+  status: "approved" | "pending" | "rejected";
+};
+type StoreOrders = {
+  ordersCount: number;
+  orderSucc: number;
+  totalEarn: number;
+};
 
+type StoreData = {
+  storeDetail: StoreDetail;
+  storeOrders: StoreOrders;
+};
 const statusMap = {
   pending: {
     color: "bg-yellow-100 text-yellow-800",
@@ -64,15 +72,15 @@ export default function StoreStatusPage(): React.ReactElement {
 
   if (!store) return <p className="text-center">กำลังโหลด...</p>;
 
-  const status = statusMap[store.status];
+  const status = statusMap[store.storeDetail.status];
 
   return (
     <div className="max-w-xl mx-auto p-6 text-center border rounded-lg shadow">
       <div className={`p-4 rounded ${status.color}`}>
         <div className="text-5xl mb-4">{status.icon}</div>
         <h2 className="text-xl font-semibold">{status.message}</h2>
-        <p className="text-sm mt-2 text-gray-600">ชื่อร้าน: {store.name}</p>
-        {store.status === "approved" && (
+        <p className="text-sm mt-2 text-gray-600">ชื่อร้าน: {store.storeDetail.name}</p>
+        {store.storeDetail.status === "approved" && (
           <button
             className="mt-4 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 cursor-pointer"
             onClick={() => router.push("/store/dashboard")}
@@ -80,7 +88,7 @@ export default function StoreStatusPage(): React.ReactElement {
             ไปที่หน้าจัดการร้านค้า
           </button>
         )}
-        {store.status === "rejected" && (
+        {store.storeDetail.status === "rejected" && (
           <button
             className="mt-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
             onClick={() => router.push("/store/register")}

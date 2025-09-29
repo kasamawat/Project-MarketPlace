@@ -22,6 +22,9 @@ export type SkuBase = {
   onHand?: number;
   reserved?: number;
   available?: number; // ถ้า BE ไม่ส่งมา จะคำนวณใน FE ก็ได้
+
+  cover?: ImageItemDto;
+  images?: ImageItemDto[];
 };
 
 export type SkuRow = SkuInput & { _id?: string }; // _id มีเฉพาะของเดิม
@@ -35,6 +38,18 @@ export type SkuInput = SkuBase;       // สำหรับ POST/PUT เฉพ�
 /** ─────────────────────────────────────────────────────────
  *  Product list item
  *  ───────────────────────────────────────────────────────── */
+export type ImageItemDto = {
+  _id: string;
+  role: string;
+  order: number;
+  publicId: string;
+  version?: number;
+  width?: number;
+  height?: number;
+  format?: string;
+  url?: string; // ถ้าเก็บไว้
+};
+
 export type ProductListItem = {
   _id: string;
   name: string;
@@ -48,6 +63,9 @@ export type ProductListItem = {
   skuCount?: number;
   createdAt?: string; // ISO
   updatedAt?: string; // ISO
+
+  cover?: ImageItemDto;
+  images?: ImageItemDto[];
 };
 
 /** ─────────────────────────────────────────────────────────
@@ -64,6 +82,9 @@ export type ProductDetailResponse = {
   status: ProductStatus;
   createdAt: string; // ISO
   updatedAt: string; // ISO
+
+  cover?: ImageItemDto;
+  images?: ImageItemDto[];
 };
 
 /** ─────────────────────────────────────────────────────────
@@ -79,6 +100,9 @@ export type ProductEditorState = {
   defaultPrice?: number;
   status: ProductStatus;
   skus: SkuRow[]; // explicit SKUs
+
+  cover?: ImageItemDto;
+  images?: ImageItemDto[];
 };
 
 /** ─────────────────────────────────────────────────────────
@@ -154,6 +178,7 @@ export type PublicProduct = {
   priceTo?: number;           // ราคาสูงสุด (ถ้าเท่ากับ priceFrom ให้ omit)
 
   skuCount: number;           // จำนวนตัวเลือกที่ซื้อได้ (purchasable SKUs)
+  cover: ImageItemDto;
   // (ออปชัน) ป้ายร้าน
   store?: { _id: string; name: string; slug?: string };
 };
@@ -175,4 +200,6 @@ export type SkuPublic = {
   image?: string;
   purchasable?: boolean;
   available?: number; // ถ้า BE ส่งมา
+  cover?: ImageItemDto;
+  images?: ImageItemDto[];
 };

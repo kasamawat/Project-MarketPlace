@@ -14,6 +14,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import Image from "next/image";
 
 type IconType = React.ComponentType<{ size?: number; className?: string }>;
 
@@ -66,10 +67,12 @@ const items: Item[] = [
 
 export default function StoreSidebar({
   storeName,
+  logoUrl,
   onToggle,
   onNavigate,
 }: {
   storeName?: string;
+  logoUrl?: string;
   onToggle?: () => void; // ใช้เปิด/ปิดเฉพาะ mobile overlay
   onNavigate?: () => void; // ปิด overlay เมื่อกด link (mobile)
 }) {
@@ -95,7 +98,7 @@ export default function StoreSidebar({
 
   return (
     <nav className="flex h-full flex-col">
-      {/* Header: mobile (มีปุ่ม) */}
+      {/* Header: mobile */}
       <div className="flex items-center justify-between border-b border-gray-800 px-3 py-3 md:hidden">
         <button
           type="button"
@@ -105,16 +108,43 @@ export default function StoreSidebar({
         >
           <Menu size={18} />
         </button>
-        <span className="ml-2 truncate font-semibold">
-          {storeName ? `${storeName} • Dashboard` : "Store Dashboard"}
-        </span>
+
+        <div className="flex items-center gap-3">
+          {logoUrl ? (
+            <Image
+              src={logoUrl}
+              alt="Store logo"
+              width={40}
+              height={40}
+              className="h-10 w-10 rounded-md object-cover"
+              draggable={false}
+            />
+          ) : (
+            <div className="h-10 w-10 rounded-md bg-gray-700" />
+          )}
+          <span className="truncate font-semibold">{storeName || "Store"}</span>
+        </div>
       </div>
 
       {/* Header: desktop */}
-      <div className="hidden items-center border-b border-gray-800 px-3 py-3 md:flex">
-        <span className="truncate font-semibold">
-          {storeName ? `${storeName} • Dashboard` : "Store Dashboard"}
-        </span>
+      <div className="hidden items-center border-b border-gray-800 px-4 py-3 md:flex">
+        <div className="flex items-center gap-3">
+          {logoUrl ? (
+            <Image
+              src={logoUrl}
+              alt="Store logo"
+              width={48}
+              height={48}
+              className="h-12 w-12 rounded-md object-cover"
+              draggable={false}
+            />
+          ) : (
+            <div className="h-12 w-12 rounded-md bg-gray-700" />
+          )}
+          <span className="truncate text-lg font-semibold">
+            {storeName || "Store"}
+          </span>
+        </div>
       </div>
 
       {/* Menu */}

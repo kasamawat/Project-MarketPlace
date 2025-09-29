@@ -4,8 +4,13 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { BuyerOrderDetail } from "@/lib/helpers/orderDetail";
+import Image from "next/image";
 
-type Props = { storeOrder: BuyerOrderDetail };
+type Props = {
+  masterOrderId: string;
+  storeOrderId: string;
+  storeOrder: BuyerOrderDetail;
+};
 
 // ถ้ามี useCountdown อยู่แล้ว ให้ import ของคุณแทน
 function useCountdown(iso?: string) {
@@ -46,8 +51,24 @@ function StatusBadge({ status }: { status: BuyerOrderDetail["buyerStatus"] }) {
     </span>
   );
 }
+function storeStatusBage(s: string) {
+  const map: Record<string, string> = {
+    PENDING: "bg-amber-100 text-amber-800",
+    SHIPPED: "bg-blue-100 text-green-800",
+    DELIVERED: "bg-green-100 text-green-800",
+    CANCELED: "bg-red-100 text-red-700",
+  };
 
-export default function ClientOrderDetail({ storeOrder }: Props) {
+  return map[s] || "bg-gray-100 text-gray-700";
+}
+
+export default function ClientOrderDetail({
+  masterOrderId,
+  storeOrderId,
+  storeOrder,
+}: Props) {
+  console.log(masterOrderId, "masterOrderId");
+
   const router = useRouter();
   const leftMs = useCountdown(storeOrder.reservationExpiresAt);
   const isExpired = storeOrder.buyerStatus === "expired" || leftMs <= 0;
@@ -56,6 +77,8 @@ export default function ClientOrderDetail({ storeOrder }: Props) {
       storeOrder.buyerStatus
     ) && !isExpired;
 
+    console.log(storeOrder,"storeOrder");
+    
   const storePrice = storeOrder.stores[0].pricing ?? {
     itemsTotal: storeOrder.stores[0].items.reduce((acc, it) => {
       return acc + it.quantity;
@@ -74,26 +97,27 @@ export default function ClientOrderDetail({ storeOrder }: Props) {
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-bold">
-            คำสั่งซื้อ #{storeOrder.stores[0].storeOrderId}
+            Order #{storeOrder.stores[0].storeOrderId}
           </h1>
           <div className="text-sm text-gray-500">
-            สร้างเมื่อ {new Date(storeOrder.createdAt).toLocaleString()}
+            CreatedAt {new Date(storeOrder.createdAt).toLocaleString()}
           </div>
         </div>
         <div className="mt-auto mb-auto">
-          <StatusBadge status={storeOrder.buyerStatus} />
-          {/* <div className="text-sm text-gray-500">
-            ชำระเงินเมื่อ {new Date(storeOrder.paidAt).toLocaleString()}
-          </div> */}
+          Payment Status: <StatusBadge status={storeOrder.buyerStatus} />
         </div>
       </div>
 
       {/* Info bar */}
       <div className="rounded-lg border border-gray-700 p-4 flex items-center justify-between bg-gray-900">
         <div className="text-sm text-gray-300">
-          รวมทั้งหมด:{" "}
-          <span className="font-semibold text-white">
-            {storePrice.grandTotal.toLocaleString()} {storeOrder.currency}
+          Store Status:{" "}
+          <span
+            className={`text-md inline-flex items-center rounded-full px-2 py-0.5 font-medium ${storeStatusBage(
+              storeOrder.stores[0].storeStatus
+            )}`}
+          >
+            {storeOrder.stores[0].storeStatus}
           </span>
         </div>
         <div className="text-sm">
@@ -119,7 +143,7 @@ export default function ClientOrderDetail({ storeOrder }: Props) {
         {/* Left: Items */}
         <div className="lg:col-span-2 rounded-lg border border-gray-700 overflow-hidden">
           <div className="px-4 py-3 border-b border-gray-700 bg-gray-900 font-semibold">
-            รายการสินค้า
+            Order Detail
           </div>
           <div className="divide-y divide-gray-800">
             {storeOrder.stores[0].items.map((it, idx) => (
@@ -127,18 +151,13 @@ export default function ClientOrderDetail({ storeOrder }: Props) {
                 key={`${it.productId}:${it.skuId}:${idx}`}
                 className="p-4 flex items-center gap-4"
               >
-                {it.productImage ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={it.productImage}
-                    alt={it.productName}
-                    className="w-16 h-16 object-cover rounded-md border border-gray-700"
-                  />
-                ) : (
-                  <div className="w-16 h-16 grid place-items-center rounded-md border border-dashed border-gray-700 text-xs text-gray-500">
-                    No image
-                  </div>
-                )}
+                <Image
+                  src={it?.cover?.url || "/no-image.png"}
+                  alt={it.productName}
+                  width={160}
+                  height={224}
+                  className="h-25 w-25 rounded object-cover border"
+                />
                 <div className="flex-1 min-w-0">
                   <div className="font-medium truncate">{it.productName}</div>
                   {it.attributes && Object.keys(it.attributes).length > 0 && (
@@ -169,31 +188,31 @@ export default function ClientOrderDetail({ storeOrder }: Props) {
           {/* Summary */}
           <div className="rounded-lg border border-gray-700 overflow-hidden">
             <div className="px-4 py-3 border-b border-gray-700 bg-gray-900 font-semibold">
-              สรุปยอด
+              Order Summary
             </div>
             <div className="p-4 space-y-2 text-sm">
               <Row
-                label="ค่าสินค้า"
+                label="Items"
                 value={`฿ ${storePrice.itemsTotal.toLocaleString()}`}
               />
               <Row
-                label="ค่าส่ง"
+                label="Shipping"
                 value={`฿ ${storeOrder?.pricing?.shippingFee.toLocaleString()}`}
               />
               {(storeOrder?.pricing?.discountTotal ?? 0) > 0 && (
                 <Row
-                  label="ส่วนลด"
+                  label="Discount"
                   value={`- ฿ ${storeOrder?.pricing?.discountTotal.toLocaleString()}`}
                 />
               )}
               {(storeOrder?.pricing?.taxTotal ?? 0) > 0 && (
                 <Row
-                  label="ภาษี"
+                  label="Tax"
                   value={`฿ ${storeOrder?.pricing?.taxTotal.toLocaleString()}`}
                 />
               )}
               <div className="pt-2 mt-2 border-t border-gray-800 flex items-center justify-between">
-                <div className="font-semibold">ยอดสุทธิ</div>
+                <div className="font-semibold">Total</div>
                 <div className="font-bold text-white">
                   ฿ {storePrice.grandTotal.toLocaleString()}
                 </div>
@@ -204,26 +223,23 @@ export default function ClientOrderDetail({ storeOrder }: Props) {
           {/* Payment */}
           <div className="rounded-lg border border-gray-700 overflow-hidden">
             <div className="px-4 py-3 border-b border-gray-700 bg-gray-900 font-semibold">
-              การชำระเงิน
+              Payment
             </div>
             <div className="p-4 text-sm space-y-2">
               <Row
-                label="ผู้ให้บริการ"
+                label="Provider"
                 value={storeOrder.payment?.provider ?? "-"}
               />
               <Row
-                label="สถานะชำระ"
+                label="Payment Status"
                 value={storeOrder.payment?.status ?? "-"}
               />
               {storeOrder.payment?.intentId && (
-                <Row
-                  label="เลขที่การชำระ"
-                  value={storeOrder.payment.intentId}
-                />
+                <Row label="Payment ID" value={storeOrder.payment.intentId} />
               )}
               {storeOrder.payment?.receiptEmail && (
                 <Row
-                  label="อีเมลใบเสร็จ"
+                  label="Receipt Email"
                   value={storeOrder.payment.receiptEmail}
                 />
               )}
@@ -233,14 +249,14 @@ export default function ClientOrderDetail({ storeOrder }: Props) {
                   href={`/checkout/pay/${storeOrder.masterOrderId}`}
                   className="mt-2 inline-flex w-full items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-500"
                 >
-                  ชำระเงินตอนนี้
+                  Pay Now
                 </Link>
               ) : storeOrder.buyerStatus === "paid" ? (
                 <Link
                   href={`/account/orders/${storeOrder.masterOrderId}/invoice`}
                   className="mt-2 inline-flex w-full items-center justify-center rounded-md border border-gray-600 px-4 py-2 text-gray-100 hover:bg-gray-800"
                 >
-                  ดู/พิมพ์ใบเสร็จ
+                  View/Print Invoice
                 </Link>
               ) : null}
             </div>
@@ -249,10 +265,10 @@ export default function ClientOrderDetail({ storeOrder }: Props) {
           {/* Shipping */}
           <div className="rounded-lg border border-gray-700 overflow-hidden">
             <div className="px-4 py-3 border-b border-gray-700 bg-gray-900 font-semibold">
-              การจัดส่ง
+              Shipping
             </div>
             <div className="p-4 text-sm space-y-1">
-              <div>วิธีส่ง: {storeOrder.stores[0].shipping?.method ?? "-"}</div>
+              <div>Method: {storeOrder.stores[0].shipping?.method ?? "-"}</div>
               <div className="text-gray-300">
                 {[
                   storeOrder.stores[0].shipping?.address?.line1,
@@ -265,8 +281,8 @@ export default function ClientOrderDetail({ storeOrder }: Props) {
                   .join(" ")}
               </div>
               <div className="text-gray-400">
-                ผู้รับ: {storeOrder.stores[0].shipping?.contact?.name ?? "-"} /{" "}
-                {storeOrder.stores[0].shipping?.contact?.phone ?? "-"}
+                Recipient: {storeOrder.stores[0].shipping?.contact?.name ?? "-"}{" "}
+                / {storeOrder.stores[0].shipping?.contact?.phone ?? "-"}
               </div>
             </div>
           </div>
@@ -276,7 +292,7 @@ export default function ClientOrderDetail({ storeOrder }: Props) {
             storeOrder.stores[0].timeline.length > 0 && (
               <div className="rounded-lg border border-gray-700 overflow-hidden">
                 <div className="px-4 py-3 border-b border-gray-700 bg-gray-900 font-semibold">
-                  ไทม์ไลน์
+                  Timeline
                 </div>
                 <ul className="p-4 space-y-2 text-sm">
                   {storeOrder.stores[0].timeline.map((t, i) => (
@@ -300,10 +316,19 @@ export default function ClientOrderDetail({ storeOrder }: Props) {
       <div className="flex items-center justify-end gap-3">
         <Link
           href="/account/orders"
-          className="px-4 py-2 rounded-md border border-gray-600 text-gray-100 hover:bg-gray-800"
+          className="px-4 py-2 rounded-md border bg-blue-900 border-gray-600 text-gray-100 hover:bg-blue-950"
         >
-          กลับไปหน้ารายการคำสั่งซื้อ
+          Back to My Orders
         </Link>
+        {storeOrder.stores[0].storeStatus === "DELIVERED" && (
+          <Link
+            href={`/account/orders/${masterOrderId}/${storeOrderId}/review`}
+            className="px-4 py-2 rounded-md border border-gray-600 text-gray-100 hover:bg-gray-800"
+          >
+            Review Orders
+          </Link>
+        )}
+
         {canPay && (
           <button
             onClick={() =>

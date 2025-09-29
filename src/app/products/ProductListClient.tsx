@@ -150,6 +150,7 @@ export default function ProductListClient({
                   priceTo: p.priceTo,
                   // (ออปชัน) แสดงจำนวนตัวเลือก
                   skuCount: p.skuCount,
+                  cover: p.cover,
                   store: p.store,
                 }}
               />

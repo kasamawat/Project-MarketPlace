@@ -11,6 +11,7 @@ import {
   priceSummaryFor,
 } from "@/lib/helpers/productList";
 import AdjustStockModal from "@/components/inventory/AdjustStockModal";
+import ThumbnailWithModal from "@/components/store/products/ThumbnailWithModal";
 
 type DeleteTarget =
   | { type: "product"; productId: string }
@@ -97,6 +98,7 @@ export default function ProductList(): React.ReactElement {
         });
         if (!res.ok) throw new Error();
         const data: ProductListItem[] = await res.json();
+        console.log(data, "data");
 
         if (cancelled) return;
         setProducts(data);
@@ -201,16 +203,7 @@ export default function ProductList(): React.ReactElement {
   if (loading) return <div className="p-6">Loading...</div>;
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
-      {/* <div className="mb-4">
-        <Link
-          href="/store/dashboard"
-          className="text-sm text-indigo-500 hover:underline"
-        >
-          ← Back to Dashboard
-        </Link>
-      </div> */}
-
+    <div className="w-full max-w-none px-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-semibold text-white">Product List</h1>
         <Link
@@ -278,18 +271,11 @@ export default function ProductList(): React.ReactElement {
                     <td className="px-4 py-3 border border-gray-700">
                       {p.type}
                     </td>
-                    <td className="px-4 py-3 border border-gray-700 text-center">
-                      {p.image ? (
-                        <Image
-                          src={p.image}
-                          alt={p.name}
-                          width={80}
-                          height={80}
-                          className="h-20 w-20 mx-auto rounded object-cover"
-                        />
-                      ) : (
-                        "—"
-                      )}
+                    <td
+                      className="px-4 py-3 border border-gray-700 text-center"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <ThumbnailWithModal name={p.name} images={p.images} />
                     </td>
                     <td className="px-4 py-3 border border-gray-700 text-right">
                       {priceSummary.text}
@@ -385,14 +371,14 @@ export default function ProductList(): React.ReactElement {
                                           {s.skuCode ?? "—"}
                                         </td>
                                         <td className="px-3 py-2 border border-gray-700 truncate">
-                                          {s.image ? (
-                                            <a
-                                              href={s.image}
-                                              className="text-indigo-400 hover:underline"
-                                              target="_blank"
-                                            >
-                                              link
-                                            </a>
+                                          {s.images?.[0] ? (
+                                            <Image
+                                              src={s.images?.[0].url ?? "/no-image.png"}
+                                              alt={attrsToText(s.attributes)}
+                                              width={80}
+                                              height={80}
+                                              className="h-20 w-20 mx-auto rounded object-cover transition-transform duration-200 ease-in-out hover:scale-110"
+                                            />
                                           ) : (
                                             "—"
                                           )}
@@ -402,7 +388,9 @@ export default function ProductList(): React.ReactElement {
                                         </td>
                                         <td
                                           className={`px-3 py-2 border border-gray-700 text-right ${
-                                            (s.reserved ?? 0) > 0 ? "text-amber-700 font-semibold" : ""
+                                            (s.reserved ?? 0) > 0
+                                              ? "text-amber-700 font-semibold"
+                                              : ""
                                           }`}
                                         >
                                           {fmtPrice(s.reserved) || "—"}
@@ -420,18 +408,6 @@ export default function ProductList(): React.ReactElement {
                                           {s.purchasable ?? true ? "✓" : "—"}
                                         </td>
                                         <td className="px-3 py-2 border border-gray-700 text-center">
-                                          {/* <button
-                                            className="px-2 py-1 text-red-500 hover:underline"
-                                            onClick={() =>
-                                              setDeleting({
-                                                type: "sku",
-                                                productId: p._id,
-                                                skuId: String(s._id),
-                                              })
-                                            }
-                                          >
-                                            Delete
-                                          </button> */}
                                           <button
                                             type="button"
                                             className="px-3 py-1 rounded bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer"

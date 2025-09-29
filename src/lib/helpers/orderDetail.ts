@@ -1,3 +1,4 @@
+import { ImageItemDto } from "@/types/product/products.types";
 import { MasterStatus, StoreStatus } from "./order/order-base.types";
 
 /* ===== Input types from aggregation ===== */
@@ -20,6 +21,11 @@ type StoreOrderItemView = {
   subtotal: number;
   fulfillStatus: FulfillStatus;
   attributes?: Record<string, string>;
+  cover: ImageItemDto;
+  
+  reviewed: boolean;
+  reviewId?: string;
+  reviewedAt?: string;
 };
 
 type Address = {
@@ -55,6 +61,7 @@ type StoreOrderBriefOut = {
   storeOrderId: string;
   storeId: string;
   buyerStatus: MasterStatus;
+  storeStatus: StoreStatus;
   pricing: { itemsTotal: number; grandTotal: number };
   items: StoreOrderItemView[];
   shipping: ShippingInfo;
@@ -105,18 +112,19 @@ type storesSummary = {
     image?: string;
     attributes?: Record<string, string>;
     fulfillStatus?: FulfillStatus;
+    cover: ImageItemDto;
   }[];
 };
 
 export type BuyerOrderListItem = {
   masterOrderId: string;
   createdAt: string;
-  itemsPreview: {
-    name: string;
-    qty: number;
-    image?: string;
-    attributes: Record<string, string>;
-  }[];
+  // itemsPreview: {
+  //   name: string;
+  //   qty: number;
+  //   image?: string;
+  //   attributes: Record<string, string>;
+  // }[];
   itemsCount: number;
   itemsTotal: number;
   currency: string;

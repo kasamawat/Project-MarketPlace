@@ -3,11 +3,21 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 
-type StoreData = {
+type StoreDetail = {
   _id: string;
   name: string;
   slug: string;
   status: "approved" | "pending" | "rejected";
+};
+type StoreOrders = {
+  ordersCount: number;
+  orderSucc: number;
+  totalEarn: number;
+};
+
+type StoreData = {
+  storeDetail: StoreDetail;
+  storeOrders: StoreOrders;
 };
 
 export default async function StoreDashboard() {
@@ -22,42 +32,56 @@ export default async function StoreDashboard() {
 
   const store: StoreData = await res.json();
 
-  if (store.status !== "approved") redirect("/store/status");
+  if (store.storeDetail.status !== "approved") redirect("/store/status");
 
   return (
     // <DashboardShell storeName={store.name}>
     <div className="flex flex-col max-w-full">
       <div className="max-w-6xl rounded border border-gray-700 p-6">
         <h1 className="text-xl font-bold">
-          Welcome to {store.name}&apos;s Dashboard
+          Welcome to {store.storeDetail.name}&apos;s Dashboard
         </h1>
       </div>
 
       <div className="mt-6 max-w-6xl rounded border border-gray-700 p-6">
-        <h1 className="mb-6 text-3xl font-bold">Store Dashboard</h1>
+        <h1 className="mb-6 text-3xl font-bold">Overview</h1>
 
         {/* Overview */}
         <section className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-4">
           <div className="rounded bg-gray-900 p-4 shadow">
-            <h2 className="text-lg font-semibold">Store Status</h2>
-            <p className="mt-2 font-semibold text-green-500">Approved</p>
+            <h2 className="text-lg font-semibold">Orders</h2>
+            <p className="mt-2 text-xl font-bold">
+              {store.storeOrders.ordersCount}
+            </p>
+            <span>
+              <Link
+                href="/store/orders"
+                className="cursor-pointer text-sm text-blue-700 hover:text-blue-800 underline"
+              >
+                Orders
+              </Link>
+            </span>
           </div>
           <div className="rounded bg-gray-900 p-4 shadow">
-            <h2 className="text-lg font-semibold">{"Today's Sales"}</h2>
-            <p className="mt-2 text-xl font-bold">฿12,345</p>
+            <h2 className="text-lg font-semibold">Successful Delivery</h2>
+            <p className="mt-2 text-xl font-bold">
+              {store.storeOrders.orderSucc}
+            </p>
           </div>
           <div className="rounded bg-gray-900 p-4 shadow">
-            <h2 className="text-lg font-semibold">Pending Orders</h2>
-            <p className="mt-2 text-xl font-bold">5</p>
+            <h2 className="text-lg font-semibold">Total Earnings</h2>
+            <p className="mt-2 text-xl font-bold">
+              ฿{store.storeOrders.totalEarn}
+            </p>
           </div>
           <div className="rounded bg-gray-900 p-4 shadow">
-            <h2 className="text-lg font-semibold">Products</h2>
-            <p className="mt-2 text-xl font-bold">20</p>
+            <h2 className="text-lg font-semibold">-</h2>
+            <p className="mt-2 text-xl font-bold">-</p>
           </div>
         </section>
 
         {/* Management Menu */}
-        <section className="mb-8">
+        {/* <section className="mb-8">
           <h2 className="mb-4 text-2xl font-semibold">Manage Your Store</h2>
           <div className="flex flex-wrap gap-4">
             <Link
@@ -85,7 +109,7 @@ export default async function StoreDashboard() {
               Reports
             </Link>
           </div>
-        </section>
+        </section> */}
 
         {/* Notifications */}
         <section>

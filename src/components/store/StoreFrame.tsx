@@ -6,21 +6,24 @@ import StoreSidebar from "@/components/store/StoreSidebar";
 
 export default function StoreFrame({
   storeName,
+  logoUrl,
   children,
 }: {
   storeName?: string;
+  logoUrl?: string;
   children: React.ReactNode;
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const toggleMobile = () => setMobileOpen((v) => !v);
 
   return (
-    <div className="flex min-h-screen text-gray-100 mx-auto max-w-7xl">
+    <div className="flex min-h-screen text-gray-100 mx-auto w-full max-w-none px-40">
       <div className="w-[20%]">
         {/* Sidebar (desktop - always visible) */}
         <aside className="hidden border-r border-gray-800 md:block px-4 py-6 md:px-6">
           <StoreSidebar
             storeName={storeName}
+            logoUrl={logoUrl}
             // ปุ่ม toggle จะแสดงเฉพาะ mobile อยู่แล้ว (md:hidden)
             onToggle={toggleMobile}
           />
@@ -41,6 +44,7 @@ export default function StoreFrame({
         >
           <StoreSidebar
             storeName={storeName}
+            logoUrl={logoUrl}
             onToggle={toggleMobile}
             onNavigate={toggleMobile}
           />

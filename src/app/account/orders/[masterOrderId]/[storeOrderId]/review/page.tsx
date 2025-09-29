@@ -1,7 +1,6 @@
-// app/account/orders/[orderId]/page.tsx
-import { headers } from "next/headers";
-import ClientOrderDetail from "./ClientOrderDetail";
 import { BuyerOrderDetail } from "@/lib/helpers/orderDetail";
+import ClientReview from "./ClientReview";
+import { headers } from "next/headers";
 
 async function getOrder(
   masterOrderId: string,
@@ -24,22 +23,19 @@ async function getOrder(
   return res.json();
 }
 
-export default async function OrderDetailPage({
+export default async function ReviewPage({
   params,
 }: {
   params: { masterOrderId: string; storeOrderId: string };
 }) {
   const { masterOrderId, storeOrderId } = await params;
+
   const data = await getOrder(masterOrderId, storeOrderId);
   console.log(data, "data");
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
-      <ClientOrderDetail
-        masterOrderId={masterOrderId}
-        storeOrderId={storeOrderId}
-        storeOrder={data}
-      />
+      <ClientReview storeOrder={data} />
     </div>
   );
 }

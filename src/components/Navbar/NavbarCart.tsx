@@ -10,6 +10,7 @@ import { attrsToText } from "@/lib/helpers/productList";
 
 const NavbarCart: React.FC = () => {
   const { cartItems, removeFromCart } = useCart();
+  // console.log(cartItems, "cartItems");
 
   const groupItems = Object.groupBy(cartItems, (item) =>
     String(item?.store?.id)
@@ -118,10 +119,10 @@ const NavbarCart: React.FC = () => {
                             <div className="p-2 col-span-2 flex items-center justify-center">
                               <Link href={`/products/${item.productId}`}>
                                 <Image
-                                  src={item?.productImage || "/no-image.png"}
+                                  src={item?.cover?.url || "/no-image.png"}
                                   alt={item.productName}
-                                  width={25}
-                                  height={28}
+                                  width={160} // ≥ ขนาดแสดงจริง เพื่อไม่ให้แตก (เช่น 160x224)
+                                  height={224}
                                   className="w-25 h-28 object-cover rounded-md shadow border-1 border-solid border-gray-600"
                                 />
                               </Link>

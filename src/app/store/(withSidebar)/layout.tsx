@@ -14,7 +14,7 @@ async function fetchStoreName(token: string | undefined) {
     const data = await res.json();
     console.log(data, "data");
 
-    return data?.name ?? undefined;
+    return data ?? undefined;
   }
   return undefined;
 }
@@ -25,9 +25,9 @@ export default async function StoreLayout({
   children: React.ReactNode;
 }) {
   const token = (await cookies()).get("token")?.value;
-  let storeName: string | undefined = undefined;
+  const result = await fetchStoreName(token);
+  const storeName: string | undefined = result.name || undefined;
+  const logoUrl: string | undefined = result.logoUrl || undefined;
 
-  storeName = await fetchStoreName(token);
-
-  return <StoreFrame storeName={storeName}>{children}</StoreFrame>;
+  return <StoreFrame storeName={storeName} logoUrl={logoUrl}>{children}</StoreFrame>;
 }

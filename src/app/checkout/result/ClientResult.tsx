@@ -2,9 +2,9 @@
 "use client";
 
 import { useCart } from "@/app/context/CartContext";
-import { useOrderStream } from "@/app/hooks/useOrderStream";
-import Link from "next/link";
+import { useOrderStream, OrderEvent } from "@/app/hooks/useOrderStream";
 import * as React from "react";
+import Link from "next/link";
 
 function CenterCard({ children }: { children: React.ReactNode }) {
   return (
@@ -16,53 +16,82 @@ function CenterCard({ children }: { children: React.ReactNode }) {
   );
 }
 
-export default function ClientResult({
-  masterOrderId,
-}: {
-  masterOrderId: string;
-}) {
-  const { userStatus, info, error } = useOrderStream(masterOrderId);
-  console.log(userStatus, "userStatus");
+type MasterStatus =
+  | "awaiting_payment"
+  | "pending_payment"
+  | "paying"
+  | "paid"
+  | "failed"
+  | "canceled"
+  | "expired";
 
-  const { clearCart, refetchCart } = useCart(); // เพิ่ม 2 ฟังก์ชั่นนี้ใน CartContext
+const FINAL = new Set<MasterStatus>(["paid", "canceled", "expired"]);
 
+export default function ClientResult({ masterOrderId }: { masterOrderId: string }) {
+  const apiBase = process.env.NEXT_PUBLIC_API_URL!;
+  const [userStatus, setUserStatus] = React.useState<MasterStatus>("pending_payment");
+  const [info, setInfo] = React.useState<any>(null);
+  const [error, setError] = React.useState<string | null>(null);
+
+  const { clearCart, refetchCart } = useCart();
   const handledPaidRef = React.useRef(false);
 
+  // 1) โหลดสถานะครั้งแรก (ตอนรีเฟรชเพจ)
+  const fetchInitial = React.useCallback(async () => {
+    try {
+      const res = await fetch(`${apiBase}/orders/${masterOrderId}/result`, { credentials: "include" });
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      setUserStatus(data.buyerStatus as MasterStatus);
+      setInfo({
+        masterOrderId: data.masterOrderId,
+        buyerStatus: data.buyerStatus,
+        createdAt: data.createdAt,
+        currency: data.currency,
+        payment: data.payment,
+        paidAt: data.paidAt,
+        paidAmount: data.paidAmount,
+        paidCurrency: data.paidCurrency,
+        paymentIntentId: data.payment?.intentId,
+        stores: data.stores,
+      });
+    } catch (e) {
+      setError((e as Error)?.message || "โหลดคำสั่งซื้อไม่สำเร็จ");
+    }
+  }, [apiBase, masterOrderId]);
+
+  React.useEffect(() => {
+    if (!masterOrderId) return;
+    fetchInitial();
+  }, [masterOrderId, fetchInitial]);
+
+  // 2) เปิด SSE แบบเดียวกับ useNotificationsStream
+  useOrderStream(masterOrderId, (evt: OrderEvent) => {
+    if (!evt?.status) return;
+    setUserStatus(evt.status as MasterStatus);
+    setInfo((prev: any) => ({ ...(prev ?? { masterOrderId }), ...evt }));
+  });
+
+  // 3) ล้างตะกร้าเมื่อจ่ายสำเร็จ (กันยิงซ้ำ)
   React.useEffect(() => {
     if (userStatus !== "paid") return;
-    if (handledPaidRef.current) return; // กันยิงซ้ำ
+    if (handledPaidRef.current) return;
     handledPaidRef.current = true;
-
-    // 1) เคลียร์ local ทันที
     clearCart({ localOnly: true });
-    // 2) ซิงก์จาก BE (ครั้งเดียว)
     refetchCart();
   }, [userStatus, clearCart, refetchCart]);
 
   if (!masterOrderId) return <CenterCard>ไม่พบ orderId</CenterCard>;
-  if (error)
-    return (
-      <CenterCard>
-        <div className="text-red-500">SSE: {error}</div>
-      </CenterCard>
-    );
+  if (error) return <CenterCard><div className="text-red-500">SSE: {error}</div></CenterCard>;
 
   if (userStatus === "paid") {
     return (
       <CenterCard>
         <h1 className="text-2xl font-bold text-green-600">ชำระเงินสำเร็จ</h1>
-        <div>
-          ยอด: {info?.paidAmount ?? info?.payment?.amount}{" "}
-          {info?.paidCurrency ?? info?.payment?.currency}
-        </div>
-        <div>
-          เวลา: {info?.paidAt ? new Date(info.paidAt).toLocaleString() : "-"}
-        </div>
+        <div>ยอด: {info?.paidAmount ?? info?.payment?.amount} {info?.paidCurrency ?? info?.payment?.currency}</div>
+        <div>เวลา: {info?.paidAt ? new Date(info.paidAt).toLocaleString() : "-"}</div>
         <div>Charge ID: {info?.payment?.intentId}</div>
-        <Link
-          href="/account/orders"
-          className="inline-block mt-4 px-4 py-2 rounded bg-black text-white"
-        >
+        <Link href="/account/orders" className="inline-block mt-4 px-4 py-2 rounded bg-black text-white">
           ไปหน้าคำสั่งซื้อ
         </Link>
       </CenterCard>
@@ -72,13 +101,8 @@ export default function ClientResult({
   if (userStatus === "canceled") {
     return (
       <CenterCard>
-        <h1 className="text-2xl font-bold text-red-600">
-          การชำระเงินไม่สำเร็จ
-        </h1>
-        <Link
-          href="/checkout"
-          className="inline-block mt-4 px-4 py-2 rounded bg-black text-white"
-        >
+        <h1 className="text-2xl font-bold text-red-600">การชำระเงินไม่สำเร็จ</h1>
+        <Link href="/checkout" className="inline-block mt-4 px-4 py-2 rounded bg-black text-white">
           ลองใหม่
         </Link>
       </CenterCard>
@@ -94,7 +118,6 @@ export default function ClientResult({
     );
   }
 
-  // awaiting_payment / paying / checking
   return (
     <CenterCard>
       <h1 className="text-xl font-semibold">กำลังตรวจสอบสถานะการชำระเงิน…</h1>

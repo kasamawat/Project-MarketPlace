@@ -13,6 +13,7 @@ import PACKEDModal, {
 import SHIPPEDModal, {
   ShipPayload,
 } from "@/components/store/orders/fulfill/SHIPPED";
+import Image from "next/image";
 
 export default function FulfillPage(): React.ReactElement {
   const { storeOrderId } = useParams<{ storeOrderId: string }>();
@@ -25,6 +26,11 @@ export default function FulfillPage(): React.ReactElement {
   // modal state
   const [openPack, setOpenPack] = React.useState(false);
   const [openShip, setOpenShip] = React.useState(false);
+
+  // delete
+  const [deleting, setDeleting] = React.useState<{ packageId: string } | null>(
+    null
+  );
 
   const api = process.env.NEXT_PUBLIC_API_URL!;
 
@@ -54,6 +60,27 @@ export default function FulfillPage(): React.ReactElement {
       await refresh();
     } catch (e) {
       toast.error((e as Error).message || "Pack failed");
+    }
+  }
+
+  async function onPackDel() {
+    if (!deleting) return;
+    console.log(deleting?.packageId, "deleting?.packageId");
+    try {
+      const res = await fetch(
+        `${api}/store/orders/${storeOrderId}/fulfill/pack/${deleting?.packageId}`,
+        {
+          method: "DELETE",
+          credentials: "include",
+        }
+      );
+      if (!res.ok) throw new Error(await res.text());
+      toast.success("Packed successfully");
+      await refresh();
+    } catch (e) {
+      toast.error((e as Error).message || "UnPack failed");
+    } finally {
+      setDeleting(null);
     }
   }
 
@@ -99,6 +126,10 @@ export default function FulfillPage(): React.ReactElement {
   if (!order) return <div className="p-4 text-red-500">Order not found</div>;
   const pkgs = order.fulfillment?.packages ?? [];
   const ships = order.fulfillment?.shipments ?? [];
+
+  const usedPackageIds = new Set(
+    ships.flatMap((sh) => (sh.packageIds ?? []).map((id) => String(id)))
+  );
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8 space-y-8">
@@ -147,6 +178,7 @@ export default function FulfillPage(): React.ReactElement {
         <table className="w-full text-sm">
           <thead className="bg-gray-700 text-gray-100">
             <tr>
+              <th className="p-2 text-center">Image</th>
               <th className="p-2 text-left">Product</th>
               <th className="p-2 text-center">Ordered</th>
               <th className="p-2 text-center">Packed</th>
@@ -160,6 +192,15 @@ export default function FulfillPage(): React.ReactElement {
               const q = humanQty(it);
               return (
                 <tr key={it.skuId} className="border-t border-gray-700">
+                  <td className="p-2">
+                    <Image
+                      src={it?.cover?.url || "/no-image.png"}
+                      alt={it.name}
+                      width={160}
+                      height={224}
+                      className="h-25 w-25 rounded object-cover border"
+                    />
+                  </td>
                   <td className="p-2">
                     <div className="font-medium">{it.name}</div>
                     <div className="text-gray-400 text-xs">
@@ -187,52 +228,67 @@ export default function FulfillPage(): React.ReactElement {
           <div className="p-4 text-gray-400 text-sm">ยังไม่มีกล่อง</div>
         ) : (
           <ul className="divide-y divide-gray-700">
-            {pkgs.map((p) => (
-              <li
-                key={p._id}
-                className="p-4 grid grid-cols-1 md:grid-cols-3 gap-3"
-              >
-                <div>
-                  <div className="font-semibold text-white">
-                    {p.code || p._id.slice(-6)}
-                  </div>
-                  <div className="text-gray-400 text-xs">
-                    Created: {new Date(p.createdAt).toLocaleString()}
-                  </div>
-                </div>
-                <div className="text-sm text-gray-300">
-                  <div>Box: {p.boxType || "-"}</div>
+            {pkgs.map((p) => {
+              const pkgUsed = usedPackageIds.has(String(p._id));
+              return (
+                <li
+                  key={p._id}
+                  className="p-4 grid grid-cols-1 md:grid-cols-4 gap-3"
+                >
                   <div>
-                    Weight: {p.weightKg ? `${p.weightKg} kg` : "-"} | Size:{" "}
-                    {p.dimension?.l ?? "-"}×{p.dimension?.w ?? "-"}×
-                    {p.dimension?.h ?? "-"} cm
-                  </div>
-                  {p.note ? (
-                    <div className="text-gray-400 text-xs mt-1">
-                      Note: {p.note}
+                    <div className="font-semibold text-white">
+                      {p.code || p._id.slice(-6)}
                     </div>
-                  ) : null}
-                </div>
-                <div className="text-sm text-gray-300">
-                  <div className="font-medium">Items:</div>
-                  <ul className="list-disc ml-4">
-                    {p.items.map((x, i) => (
-                      <li key={`${p._id}-${x.skuId}-${i}`}>
-                        <div className="flex">
-                          <div>
-                            <div className="font-medium">{x.productName}</div>
-                            <div className="text-gray-400 text-xs">
-                              {attrsToText(x.attributes)}
+                    <div className="text-gray-400 text-xs">
+                      Created: {new Date(p.createdAt).toLocaleString()}
+                    </div>
+                  </div>
+                  <div className="text-sm text-gray-300">
+                    <div>Box: {p.boxType || "-"}</div>
+                    <div>
+                      Weight: {p.weightKg ? `${p.weightKg} kg` : "-"} | Size:{" "}
+                      {p.dimension?.l ?? "-"}×{p.dimension?.w ?? "-"}×
+                      {p.dimension?.h ?? "-"} cm
+                    </div>
+                    {p.note ? (
+                      <div className="text-gray-400 text-xs mt-1">
+                        Note: {p.note}
+                      </div>
+                    ) : null}
+                  </div>
+                  <div className="text-sm text-gray-300">
+                    <div className="font-medium">Items:</div>
+                    <ul className="list-disc ml-4">
+                      {p.items.map((x, i) => (
+                        <li key={`${p._id}-${x.skuId}-${i}`}>
+                          <div className="flex">
+                            <div>
+                              <div className="font-medium">{x.productName}</div>
+                              <div className="text-gray-400 text-xs">
+                                {attrsToText(x.attributes)}
+                              </div>
                             </div>
+                            <div>: x{x.qty}</div>
                           </div>
-                          <div>: x{x.qty}</div>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </li>
-            ))}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div>
+                    {pkgUsed ? (
+                      null
+                    ) : (
+                      <button
+                        className="p-2 border-1 bg-red-500 hover:bg-red-600 cursor-pointer"
+                        onClick={() => setDeleting({ packageId: p._id })}
+                      >
+                        DEL
+                      </button>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>
@@ -294,6 +350,34 @@ export default function FulfillPage(): React.ReactElement {
         onClose={() => setOpenShip(false)}
         onSubmit={onShipSubmit}
       />
+
+      {/* Confirm modal (ง่ายๆ) */}
+      {deleting && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 w-[420px]">
+            <h3 className="text-lg font-semibold text-white mb-2">
+              ยืนยันการลบ
+            </h3>
+            <p className="text-gray-300 mb-4">
+              คุณต้องการลบรายการนี้ใช่หรือไม่?
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                className="px-4 py-2 rounded border border-gray-600 text-gray-200 hover:bg-gray-800 cursor-pointer"
+                onClick={() => setDeleting(null)}
+              >
+                ยกเลิก
+              </button>
+              <button
+                className="px-4 py-2 rounded bg-red-600 hover:bg-red-700 text-white cursor-pointer"
+                onClick={onPackDel}
+              >
+                ลบ
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

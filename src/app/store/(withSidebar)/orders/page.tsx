@@ -1,4 +1,5 @@
 "use client";
+import { attrsToText } from "@/lib/helpers/productList";
 import {
   buildStoreOrdersQS,
   SellerTabKey,
@@ -7,18 +8,19 @@ import {
   fulfillmentStatus,
   SellerOrderListItem,
 } from "@/lib/helpers/store-order.dto";
+import Image from "next/image";
 import Link from "next/link";
 import * as React from "react";
 
 const SELLER_TABS = [
-  { key: "pending", label: "Pending" },              // buyerStatus=paid & storeStatus in [PENDING, PACKED]
-  { key: "awaiting_payment", label: "Wait Pay" },    // buyerStatus=pending_payment
-  { key: "packed", label: "Packed" },                // buyerStatus=paid & storeStatus=SHIPPED
-  { key: "shipped", label: "Shipped" },              // buyerStatus=paid & storeStatus=SHIPPED
-  { key: "delivered", label: "Delivered" },          // buyerStatus=paid & storeStatus=DELIVERED
-  { key: "canceled", label: "Canceled" },            // buyerStatus=canceled
-  { key: "expired", label: "Expired" },              // buyerStatus=expired
-  { key: "all", label: "All" },                      // ทั้งหมด (optionally filter paid)
+  { key: "pending", label: "Pending" }, // buyerStatus=paid & storeStatus in [PENDING, PACKED]
+  { key: "awaiting_payment", label: "Wait Pay" }, // buyerStatus=pending_payment
+  { key: "packed", label: "Packed" }, // buyerStatus=paid & storeStatus=SHIPPED
+  { key: "shipped", label: "Shipped" }, // buyerStatus=paid & storeStatus=SHIPPED
+  { key: "delivered", label: "Delivered" }, // buyerStatus=paid & storeStatus=DELIVERED
+  { key: "canceled", label: "Canceled" }, // buyerStatus=canceled
+  { key: "expired", label: "Expired" }, // buyerStatus=expired
+  { key: "all", label: "All" }, // ทั้งหมด (optionally filter paid)
 ] as const;
 
 function payBadge(s: SellerOrderListItem["buyerStatus"]) {
@@ -76,8 +78,8 @@ export default function ClientStoreOrders() {
   }, [load]);
 
   return (
-    <div className="max-w-6xl mx-auto p-6 space-y-4">
-      <h1 className="text-2xl font-bold">ออเดอร์ของร้าน</h1>
+    <div className="w-full max-w-none px-6 space-y-4">
+      <h1 className="text-2xl font-bold">Store Order</h1>
 
       {/* Tabs */}
       <div className="flex gap-2 flex-wrap">
@@ -117,21 +119,31 @@ export default function ClientStoreOrders() {
           </thead>
           <tbody>
             {items.map((o) => {
-              const preview = o.itemsPreview
-                .slice(0, 2)
-                .map(
-                  (it) =>
-                    `${it.name}${
-                      it.attributes
-                        ? " " +
-                          Object.entries(it.attributes)
-                            .map(([k, v]) => `${k}:${v}`)
-                            .join("/")
-                        : ""
-                    } × ${it.qty}`
-                )
-                .join(", ");
               const more = o.itemsCount - o.itemsPreview.length;
+              const preview = o.itemsPreview.slice(0, 3).map((st) => (
+                <div key={st.name + st.qty} className="flex items-start mb-1">
+                  <div>
+                    <Image
+                      src={st?.cover?.url || "/no-image.png"}
+                      alt={st.name}
+                      width={160}
+                      height={224}
+                      className="w-20 h-20 object-cover rounded-md shadow border border-gray-600 mx-auto"
+                    />
+                  </div>
+                  <div className="flex flex-col ml-2">
+                    <span className="font-semibold">{st.name}</span>
+                    <span className="text-sm text-gray-400">
+                      {attrsToText(st.attributes ?? {})}
+                    </span>
+                    <span className="mt-2">
+                      {more > 0 ? ` และอีก ${more} รายการ` : ""}
+                    </span>
+                  </div>
+
+                  <div className="ml-2 whitespace-nowrap">x {st.qty}</div>
+                </div>
+              ));
 
               const canFulfill = o.buyerStatus === "paid";
               const isShippedOrDone = ["FULFILLED"].includes(

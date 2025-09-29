@@ -166,164 +166,125 @@ export default function AddressPage(): React.ReactElement {
     }
   }
 
-  // โหมดเลือกที่ checkout: เซ็ตลง cart/session หรือ localStorage แล้วกลับหน้าเดิม
-  //   async function useThisForCheckout(a: AddressInfo) {
-  //     try {
-  //       // ถ้ามี API เก็บลง cart/session ให้ใช้แบบนี้:
-  //       const res = await fetch(
-  //         `${process.env.NEXT_PUBLIC_API_URL}/cart/shippingAddress`,
-  //         {
-  //           method: "POST",
-  //           credentials: "include",
-  //           headers: { "Content-Type": "application/json" },
-  //           body: JSON.stringify(a),
-  //         }
-  //       );
-  //       if (!res.ok) {
-  //         // ถ้าไม่มี endpoint นี้ ให้ fallback localStorage
-  //         localStorage.setItem("checkout_address", JSON.stringify(a));
-  //       }
-  //     } catch {
-  //       localStorage.setItem("checkout_address", JSON.stringify(a));
-  //     } finally {
-  //       router.push(returnTo);
-  //     }
-  //   }
-
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8">
-      <div className="flex flex-col rounded border border-gray-700">
-        <div className="flex items-center justify-between bg-gray-700 p-4">
-          <h1 className="text-2xl text-black">
-            {selectMode ? "Select Shipping Address" : "My Addresses"}
-          </h1>
-          {!selectMode && (
-            <button
-              onClick={openCreate}
-              className="text-sm px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 cursor-pointer"
-            >
-              Add Address
-            </button>
-          )}
-        </div>
+    <div className="mx-auto flex max-w-4xl flex-col rounded-xl bg-gray-900 p-6 shadow-md">
+      <div className="flex items-center justify-between mb-6 border-b border-gray-800 pb-2 text-2xl font-semibold text-white">
+        {selectMode ? "Select Shipping Address" : "My Addresses"}
+        {!selectMode && (
+          <button
+            onClick={openCreate}
+            className="text-sm px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 cursor-pointer"
+          >
+            Add Address
+          </button>
+        )}
+      </div>
 
-        <div className="shadow-sm px-4 py-4 bg-gray-900">
-          {loading ? (
-            <div className="text-gray-300">Loading…</div>
-          ) : error ? (
-            <div className="text-red-400">{error}</div>
-          ) : items.length === 0 ? (
-            <div className="text-gray-300">
-              No address yet.{" "}
-              {selectMode ? "" : "Click “Add Address” to create one."}
-            </div>
-          ) : (
-            <ul className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {items.map((a) => (
-                <li
-                  key={a._id}
-                  className="rounded border border-gray-700 bg-gray-800 p-4"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <div className="font-semibold text-white flex items-center gap-2">
-                        <span>{a.name || "-"}</span>
-                        {a.isDefault && (
-                          <span className="text-xs px-2 py-0.5 rounded bg-green-600 text-white">
-                            Default
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-gray-300 text-sm">
-                        Tel: {a.phone || "-"}
-                      </div>
+      <div className="shadow-sm px-4 py-4 bg-gray-900">
+        {loading ? (
+          <div className="text-gray-300">Loading…</div>
+        ) : error ? (
+          <div className="text-red-400">{error}</div>
+        ) : items.length === 0 ? (
+          <div className="text-gray-300">
+            No address yet.{" "}
+            {selectMode ? "" : "Click “Add Address” to create one."}
+          </div>
+        ) : (
+          <ul className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {items.map((a) => (
+              <li
+                key={a._id}
+                className="rounded border border-gray-700 bg-gray-800 p-4"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="font-semibold text-white flex items-center gap-2">
+                      <span>{a.name || "-"}</span>
+                      {a.isDefault && (
+                        <span className="text-xs px-2 py-0.5 rounded bg-green-600 text-white">
+                          Default
+                        </span>
+                      )}
                     </div>
-                    {!selectMode && (
-                      <div className="flex gap-2">
-                        {!a.isDefault && (
-                          <button
-                            onClick={() => makeDefault(a)}
-                            className="text-xs px-3 py-1 bg-emerald-600 text-white rounded hover:bg-emerald-700"
-                          >
-                            Set Default
-                          </button>
-                        )}
-                        <button
-                          onClick={() => openEdit(a)}
-                          className="text-xs px-3 py-1 bg-indigo-600 text-white rounded hover:bg-indigo-700"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => deleteAddress(a)}
-                          className="text-xs px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    )}
+                    <div className="text-gray-300 text-sm">
+                      Tel: {a.phone || "-"}
+                    </div>
                   </div>
-
-                  <div className="text-gray-200 text-sm mt-3 space-y-1">
-                    {a.line1 && (
-                      <div>
-                        <span className="font-semibold">Address line 1: </span>
-                        {a.line1}
-                      </div>
-                    )}
-                    {a.line2 && (
-                      <div>
-                        <span className="font-semibold">Address line 2: </span>
-                        {a.line2}
-                      </div>
-                    )}
-                    {(a.subDistrict || a.district) && (
-                      <div>
-                        <span className="font-semibold">
-                          District/Sub-district:{" "}
-                        </span>
-                        {[a.subDistrict, a.district].filter(Boolean).join(", ")}
-                      </div>
-                    )}
-                    {(a.province || a.postalCode) && (
-                      <div>
-                        <span className="font-semibold">
-                          Province / Postal Code:{" "}
-                        </span>
-                        {[a.province, a.postalCode].filter(Boolean).join(" ")}
-                      </div>
-                    )}
-                    {a.country && (
-                      <div>
-                        <span className="font-semibold">Country: </span>
-                        {a.country}
-                      </div>
-                    )}
-                    {a.note && (
-                      <div className="text-gray-400 text-xs mt-2">
-                        <span className="font-semibold text-gray-300">
-                          Note:{" "}
-                        </span>
-                        {a.note}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* {selectMode && (
-                    <div className="mt-4 text-right">
+                  {!selectMode && (
+                    <div className="flex gap-2">
+                      {!a.isDefault && (
+                        <button
+                          onClick={() => makeDefault(a)}
+                          className="text-xs px-3 py-1 bg-emerald-600 text-white rounded hover:bg-emerald-700"
+                        >
+                          Set Default
+                        </button>
+                      )}
                       <button
-                        onClick={() => useThisForCheckout(a)}
-                        className="text-sm px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                        onClick={() => openEdit(a)}
+                        className="text-xs px-3 py-1 bg-indigo-600 text-white rounded hover:bg-indigo-700"
                       >
-                        Use this address
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => deleteAddress(a)}
+                        className="text-xs px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700"
+                      >
+                        Delete
                       </button>
                     </div>
-                  )} */}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+                  )}
+                </div>
+
+                <div className="text-gray-200 text-sm mt-3 space-y-1">
+                  {a.line1 && (
+                    <div>
+                      <span className="font-semibold">Address line 1: </span>
+                      {a.line1}
+                    </div>
+                  )}
+                  {a.line2 && (
+                    <div>
+                      <span className="font-semibold">Address line 2: </span>
+                      {a.line2}
+                    </div>
+                  )}
+                  {(a.subDistrict || a.district) && (
+                    <div>
+                      <span className="font-semibold">
+                        District/Sub-district:{" "}
+                      </span>
+                      {[a.subDistrict, a.district].filter(Boolean).join(", ")}
+                    </div>
+                  )}
+                  {(a.province || a.postalCode) && (
+                    <div>
+                      <span className="font-semibold">
+                        Province / Postal Code:{" "}
+                      </span>
+                      {[a.province, a.postalCode].filter(Boolean).join(" ")}
+                    </div>
+                  )}
+                  {a.country && (
+                    <div>
+                      <span className="font-semibold">Country: </span>
+                      {a.country}
+                    </div>
+                  )}
+                  {a.note && (
+                    <div className="text-gray-400 text-xs mt-2">
+                      <span className="font-semibold text-gray-300">
+                        Note:{" "}
+                      </span>
+                      {a.note}
+                    </div>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       {/* Drawer / Modal แก้ไข/เพิ่มที่อยู่ */}

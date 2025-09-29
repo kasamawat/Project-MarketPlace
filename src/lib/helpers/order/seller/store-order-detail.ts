@@ -1,3 +1,4 @@
+import { ImageItemDto } from "@/types/product/products.types";
 import { MasterStatus, StoreStatus } from "../order-base.types";
 
 // --- Types (adjust to your real DTOs) ---
@@ -47,7 +48,7 @@ export type FulfillmentPackage = {
     note?: string;
     items: {
         productId: string;
-        skuId: string; 
+        skuId: string;
         qty: number;
         attributes: Record<string, string>;
         productName?: string
@@ -90,7 +91,7 @@ export interface StoreOrderItemLite {
     skuId?: string;
     name: string; // ชื่อสินค้าที่เวลาสั่งซื้อ
     attributes: Record<string, string>;
-    imageUrl?: string;
+    // imageUrl?: string;
     quantity: number;
     price: number; // ราคาต่อชิ้น ณ เวลาสั่ง
     subtotal: number; // price * quantity (หลังส่วนลดของ item)
@@ -101,6 +102,7 @@ export interface StoreOrderItemLite {
     shippedQty?: number;
     deliveredQty?: number;
     canceledQty?: number;
+    cover: ImageItemDto;
 }
 
 export interface StoreOrderDetail {

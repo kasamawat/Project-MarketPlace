@@ -1,3 +1,5 @@
+export type FulfillmentStatus = "PENDING" | "PACKED" | "SHIPPED" | "DELIVERED" | "CANCELED";
+
 // FE-side type ที่แม็ปกับ BE DTO
 export type PlaceOrderDto = {
   note?: string;

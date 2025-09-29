@@ -1,6 +1,7 @@
 "use client";
 import { BuyerOrderListItem } from "@/lib/helpers/orderDetail";
 import { attrsToText } from "@/lib/helpers/productList";
+import Image from "next/image";
 import Link from "next/link";
 import * as React from "react";
 
@@ -43,6 +44,27 @@ function statusBadge(s: BuyerOrderListItem["buyerStatus"]) {
   return map[s] || "bg-gray-100 text-gray-700";
 }
 
+function storeStatusBage(s: string) {
+  const map: Record<string, string> = {
+    PENDING: "bg-amber-100 text-amber-800",
+    SHIPPED: "bg-blue-100 text-green-800",
+    DELIVERED: "bg-green-100 text-green-800",
+    CANCELED: "bg-red-100 text-red-700",
+  };
+
+  return map[s] || "bg-gray-100 text-gray-700";
+}
+
+function matchesTab(
+  store: { buyerStatus?: string; storeStatus?: string },
+  tab: StatusFilter
+) {
+  if (tab === "all") return true;
+  const okBuyer = !tab.buyerStatus || store.buyerStatus === tab.buyerStatus;
+  const okStore = !tab.storeStatus || store.storeStatus === tab.storeStatus;
+  return okBuyer && okStore;
+}
+
 export default function ClientOrders() {
   const api = process.env.NEXT_PUBLIC_API_URL!;
 
@@ -51,8 +73,8 @@ export default function ClientOrders() {
   const [page, setPage] = React.useState(1);
   const [items, setItems] = React.useState<BuyerOrderListItem[]>([]);
   const [total, setTotal] = React.useState(0);
-  console.log(items, "items");
-
+  console.log(items,"items");
+  
   // helper: เปรียบเทียบ object อย่างง่าย
   const isActive = (t: StatusFilter) =>
     JSON.stringify(t) === JSON.stringify(tab);
@@ -83,7 +105,7 @@ export default function ClientOrders() {
   }, [load]);
 
   return (
-    <div className="max-w-5xl mx-auto p-6 space-y-4">
+    <div className="w-full max-w-none px-6 space-y-4">
       <h1 className="text-2xl font-bold">คำสั่งซื้อของฉัน</h1>
 
       {/* Tabs (ใหม่) */}
@@ -204,17 +226,43 @@ export default function ClientOrders() {
                 </tr>
               </thead>
               <tbody>
-                {it.storesSummary.map((store) => {
-                  const preview = store.itemsPreview
-                    .slice(0, 3)
-                    .map((st) => `${st.name} x ${st.qty}`)
-                    .join(", ");
-                  const more = store.itemsCount - store.itemsPreview.length;
-                  return (
-                    <React.Fragment
-                      key={`${it.masterOrderId}::${store.storeId}`}
-                    >
-                      <tr className="border-gray-700">
+                {it.storesSummary
+                  .filter((store) => matchesTab(store, tab as StatusFilter))
+                  .map((store) => {
+                    const more = store.itemsPreview.length - 1;
+                    const preview = store.itemsPreview.slice(0, 1).map((st) => (
+                      <div
+                        key={st.name + st.qty}
+                        className="flex items-start mb-1"
+                      >
+                        <div>
+                          <Image
+                            src={st?.cover?.url || "/no-image.png"}
+                            alt={st.name}
+                            width={160}
+                            height={224}
+                            className="w-20 h-20 object-cover rounded-md shadow border border-gray-600 mx-auto"
+                          />
+                        </div>
+                        <div className="flex flex-col ml-2">
+                          <span className="font-semibold">{st.name}</span>
+                          <span className="text-sm text-gray-400">
+                            {attrsToText(st.attributes ?? {})}
+                          </span>
+                          <span className="mt-2">
+                            {more > 0 ? ` และอีก ${more} รายการ` : ""}
+                          </span>
+                        </div>
+
+                        <div className="ml-2 whitespace-nowrap">x {st.qty}</div>
+                      </div>
+                    ));
+
+                    return (
+                      <tr
+                        key={`${it.masterOrderId}::${store.storeId}`}
+                        className="border-gray-700"
+                      >
                         <td className="px-4 py-3 border border-gray-700 text-left">
                           <div className="font-mono">{store.storeName}</div>
                         </td>
@@ -224,14 +272,17 @@ export default function ClientOrders() {
                         <td className="px-4 py-3 border border-gray-700 text-left">
                           <div className="max-w-[20rem] whitespace-normal break-words">
                             {preview}
-                            {more > 0 ? ` และอีก ${more} รายการ` : ""}
                           </div>
                         </td>
                         <td className="px-4 py-3 border border-gray-700 text-center">
                           {store.itemsTotal.toLocaleString()} {it.currency}
                         </td>
                         <td className="px-4 py-3 border border-gray-700 text-center">
-                          <span className="px-1 py-0.5 rounded bg-amber-200 text-amber-500">
+                          <span
+                            className={`px-1 py-0.5 rounded ${storeStatusBage(
+                              store.storeStatus
+                            )}`}
+                          >
                             {store.storeStatus}
                           </span>
                         </td>
@@ -242,6 +293,7 @@ export default function ClientOrders() {
                               aria-label="ดูรายละเอียดคำสั่งซื้อ"
                               className="text-blue-600 hover:text-blue-500"
                             >
+                              {/* icon */}
                               <svg
                                 xmlns="http://www.w3.org/2000/svg"
                                 className="w-5 h-5"
@@ -266,9 +318,8 @@ export default function ClientOrders() {
                           </div>
                         </td>
                       </tr>
-                    </React.Fragment>
-                  );
-                })}
+                    );
+                  })}
               </tbody>
             </table>
           </div>

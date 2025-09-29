@@ -7,6 +7,8 @@ import {
 } from "@/lib/helpers/manageProduct";
 import { ManageProductFormInput, SkuRow } from "@/types/product/products.types";
 import { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
+import toast from "react-hot-toast";
 
 type VariantGroup = { name: string; values: string[] };
 
@@ -15,6 +17,13 @@ type ManageProductTabProps = {
   onChange: (v: ManageProductFormInput) => void;
   loading?: boolean;
   onBack: () => void;
+
+  onPickSkuImage: (key: string, file: File, prevUrlToRevoke?: string) => void;
+  onRemoveSkuImage: (key: string) => void; // ลบ "ไฟล์ใหม่" ที่เพิ่งเลือก (local only)
+  onQueueSkuImageDelete: (key: string, imageId?: string) => void; // ขอ “ลบรูปเดิม” จาก BE
+  onUndoSkuImageDelete: (key: string) => void; // ยกเลิกการ mark ลบ
+  isSkuImageDeleted: (key: string) => boolean;
+  getSkuPreview: (key: string) => string | undefined;
 };
 
 /** ---------- คอมโพเนนต์หลัก ---------- */
@@ -23,7 +32,13 @@ export default function ManageProductTab({
   onChange,
   loading,
   onBack,
-}: ManageProductTabProps) {  
+  onPickSkuImage,
+  onRemoveSkuImage,
+  onQueueSkuImageDelete,
+  onUndoSkuImageDelete,
+  isSkuImageDeleted,
+  getSkuPreview,
+}: ManageProductTabProps) {
   // 1) สถานะ UI: เปิด/ปิดหลาย SKU (ถ้าไม่เปิด => base SKU เดี่ยว)
   const [multi, setMulti] = useState<boolean>(() => {
     const s = value.skus ?? [];
@@ -32,6 +47,10 @@ export default function ManageProductTab({
     if (s[0]?._id) return true; // ← มี SKU จริงในระบบ
     return false;
   });
+
+  console.log(value.skus, "value.skus");
+
+  const keyOfRow = (r: SkuRow) => normalizeAttributes(r.attributes ?? {});
 
   const initialGroups: VariantGroup[] = inferVariantGroupsFromSkus(
     value.skus
@@ -49,7 +68,6 @@ export default function ManageProductTab({
   // 3) แถว SKU ที่แสดงในตาราง (derived จาก groups) + เก็บการแก้ไขราคา/skuCode/purchasable
   const [rows, setRows] = useState<SkuRow[]>(() => {
     // ถ้ามี skus จาก parent ให้ใช้เป็นค่าตั้งต้น
-    
     return value.skus?.length
       ? value.skus.map((s) => ({ ...s, purchasable: s.purchasable ?? true }))
       : [{ attributes: {}, price: value.defaultPrice, purchasable: true }];
@@ -401,16 +419,286 @@ export default function ManageProductTab({
                   />
                 </td>
                 <td className="px-2 py-2 border border-gray-700 align-middle">
-                  <input
-                    className="w-full h-10 px-3 py-1 rounded bg-transparent focus:bg-white/10 focus:border-indigo-500 border border-gray-600 transition text-white outline-none placeholder-gray-400"
-                    type="text"
-                    value={r.image ?? ""}
-                    onChange={(e) =>
-                      updateRow(rowIdx, { image: e.target.value || undefined })
-                    }
-                    placeholder="https://..."
-                  />
+                  {(() => {
+                    const k = keyOfRow(r);
+
+                    // id รูป persisted ฝั่งเซิร์ฟเวอร์ (ไว้ส่งไปลบ)
+                    const imageId = r.cover?._id || r.images?.[0]?._id;
+
+                    // รูป local ล่าสุด (ถ้ามี)
+                    const localPrev = getSkuPreview(k);
+
+                    // มีไฟล์ local ไหม
+                    const hasLocal =
+                      !!localPrev &&
+                      (localPrev.startsWith("blob:") ||
+                        localPrev.startsWith("data:"));
+
+                    // ถูกมาร์คให้ลบฝั่งเซิร์ฟเวอร์ไหม
+                    const marked = isSkuImageDeleted(k);
+
+                    // รูป persisted เดิม
+                    const persisted =
+                      r.cover?.url || r.images?.[0]?.url || "";
+
+                    // รูปที่จะโชว์: local > (ถ้า marked แล้วไม่มี local → ซ่อน) > persisted
+                    const preview = localPrev || (marked ? "" : persisted);
+
+                    // badge text
+                    const badgeText = hasLocal
+                      ? "Replacing"
+                      : marked
+                      ? "Marked for delete"
+                      : null;
+
+                    const inputId = `sku-file-${rowIdx}`;
+
+                    return preview ? (
+                      <div className="relative w-30 h-30 rounded overflow-hidden border border-gray-700 shrink-0 group">
+                        {/* badge แจ้ง mark ลบ */}
+                        {badgeText && (
+                          <span className="absolute top-1 left-1 text-[10px] px-1.5 py-0.5 rounded bg-yellow-500 text-black">
+                            {badgeText}
+                          </span>
+                        )}
+
+                        {/* รูปพรีวิว */}
+                        <Image
+                          src={preview}
+                          alt="sku preview"
+                          fill
+                          sizes="80px"
+                          className="object-cover"
+                          unoptimized
+                          loader={(p) => p.src}
+                        />
+
+                        {/* file input ซ่อน */}
+                        <input
+                          id={inputId}
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            if (!f) {
+                              e.currentTarget.value = "";
+                              return;
+                            }
+
+                            // 1) validate ก่อน
+                            if (!f.type.startsWith("image/")) {
+                              toast.error("กรุณาเลือกรูปภาพเท่านั้น");
+                              e.currentTarget.value = "";
+                              return;
+                            }
+                            if (f.size > 10 * 1024 * 1024) {
+                              toast.error("ไฟล์ใหญ่เกิน 10MB");
+                              e.currentTarget.value = "";
+                              return;
+                            }
+
+                            // ให้พ่อเป็นคนตัดสินใจว่าจะคิวลบ persisted หรือแค่ลบ local
+                            onQueueSkuImageDelete(k, imageId);
+
+                            // 3) ตั้งรูปใหม่ (onPickSkuImage ควร revoke blob เดิมให้ด้วยหากส่ง preview เดิมไป)
+                            onPickSkuImage(k, f, preview);
+
+                            // 4) reset input
+                            e.currentTarget.value = "";
+                          }}
+                        />
+
+                        {/* แถบปุ่มมุมล่างขวา */}
+                        <div
+                          className="
+                            absolute bottom-1 right-1 flex gap-1
+                            bg-black/50 backdrop-blur-sm rounded-md p-1
+                            text-xs
+                            md:opacity-0 md:group-hover:opacity-100 transition
+                          "
+                        >
+                          <label
+                            htmlFor={inputId}
+                            className="px-2 py-1 rounded bg-white/90 text-gray-900 hover:bg-white cursor-pointer"
+                            title="change"
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="20"
+                              height="20"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              className="icon icon-tabler icons-tabler-outline icon-tabler-photo-edit"
+                            >
+                              <path
+                                stroke="none"
+                                d="M0 0h24v24H0z"
+                                fill="none"
+                              />
+                              <path d="M15 8h.01" />
+                              <path d="M11 20h-4a3 3 0 0 1 -3 -3v-10a3 3 0 0 1 3 -3h10a3 3 0 0 1 3 3v4" />
+                              <path d="M4 15l4 -4c.928 -.893 2.072 -.893 3 0l3 3" />
+                              <path d="M14 14l1 -1c.31 -.298 .644 -.497 .987 -.596" />
+                              <path d="M18.42 15.61a2.1 2.1 0 0 1 2.97 2.97l-3.39 3.42h-3v-3l3.42 -3.39z" />
+                            </svg>
+                          </label>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (hasLocal) {
+                                // cancel new image , undo cance; remark del restore old image
+                                onRemoveSkuImage(k);
+                                onUndoSkuImageDelete(k);
+                              } else if (!marked) {
+                                // mark ลบรูปเดิม (ต้องมี imageId ถึงจะลบที่ BE ได้จริง)
+                                onQueueSkuImageDelete(k, imageId);
+                              } else {
+                                // ยกเลิกการ mark ลบ
+                                onUndoSkuImageDelete(k);
+                              }
+                            }}
+                            className={`px-2 py-1 rounded cursor-pointer ${
+                              marked && !hasLocal
+                                ? "bg-yellow-600"
+                                : "bg-red-600"
+                            } text-white hover:opacity-90`}
+                            title={
+                              marked
+                                ? hasLocal
+                                  ? "cancel new"
+                                  : "undo del"
+                                : hasLocal
+                                ? "cancel"
+                                : "del"
+                            }
+                          >
+                            {hasLocal ? (
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="20"
+                                height="20"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                className="icon icon-tabler icons-tabler-outline icon-tabler-x"
+                              >
+                                <path
+                                  stroke="none"
+                                  d="M0 0h24v24H0z"
+                                  fill="none"
+                                />
+                                <path d="M18 6l-12 12" />
+                                <path d="M6 6l12 12" />
+                              </svg>
+                            ) : marked ? (
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="20"
+                                height="20"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                className="icon icon-tabler icons-tabler-outline icon-tabler-arrow-back"
+                              >
+                                <path
+                                  stroke="none"
+                                  d="M0 0h24v24H0z"
+                                  fill="none"
+                                />
+                                <path d="M9 11l-4 4l4 4m-4 -4h11a4 4 0 0 0 0 -8h-1" />
+                              </svg>
+                            ) : (
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="20"
+                                height="20"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                className="icon icon-tabler icons-tabler-outline icon-tabler-trash-x"
+                              >
+                                <path
+                                  stroke="none"
+                                  d="M0 0h24v24H0z"
+                                  fill="none"
+                                />
+                                <path d="M4 7h16" />
+                                <path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" />
+                                <path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3" />
+                                <path d="M10 12l4 4m0 -4l-4 4" />
+                              </svg>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="relative">
+                        <label className="block px-3 py-6 text-center rounded border border-dashed border-gray-600 hover:bg-gray-800 cursor-pointer text-sm text-gray-300">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => {
+                              const f = e.target.files?.[0];
+                              if (f) onPickSkuImage(k, f);
+                              e.currentTarget.value = "";
+                            }}
+                          />
+                          Choose image
+                        </label>
+                        {/* ถ้าถูก mark ลบและไม่มีพรีวิว ให้ปุ่ม 'ยกเลิกลบ' โผล่ตรง placeholder */}
+                        {marked && (
+                          <div className="z-10 mt-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                console.log("UNDO DEL");
+                                onUndoSkuImageDelete(k);
+                              }}
+                              className="px-2 py-1 rounded bg-yellow-600 text-black text-xs cursor-pointer"
+                            >
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="20"
+                                height="20"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                className="icon icon-tabler icons-tabler-outline icon-tabler-arrow-back"
+                              >
+                                <path
+                                  stroke="none"
+                                  d="M0 0h24v24H0z"
+                                  fill="none"
+                                />
+                                <path d="M9 11l-4 4l4 4m-4 -4h11a4 4 0 0 0 0 -8h-1" />
+                              </svg>
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </td>
+
                 <td className="px-2 py-2 border border-gray-700 align-middle text-center">
                   <input
                     type="checkbox"

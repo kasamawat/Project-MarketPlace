@@ -10,17 +10,17 @@ export default function AccountFrame({
 }: {
   children: React.ReactNode;
 }) {
-  const { user } = useUser();
+  const { userDetail } = useUser();
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const toggleMobile = () => setMobileOpen((v) => !v);
 
   return (
-    <div className="flex min-h-screen text-gray-100 mx-auto max-w-7xl">
+    <div className="flex min-h-screen text-gray-100 mx-auto w-full max-w-none px-40">
       <div className="w-[20%]">
         {/* Sidebar (desktop - always visible) */}
         <aside className="hidden border-r border-gray-800 md:block px-4 py-6 md:px-6">
-          <AccountSidebar userName={user?.username} onToggle={toggleMobile} />
+          <AccountSidebar userName={userDetail?.username} onToggle={toggleMobile} />
         </aside>
         {/* Sidebar (mobile overlay) */}
         {mobileOpen && (
@@ -36,7 +36,7 @@ export default function AccountFrame({
           ].join(" ")}
         >
           <AccountSidebar
-            userName={user?.username}
+            userName={userDetail?.username}
             onToggle={toggleMobile}
             onNavigate={toggleMobile}
           />

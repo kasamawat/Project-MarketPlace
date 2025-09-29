@@ -8,8 +8,8 @@ import NavbarCart from "./NavbarCart";
 import NavbarSearch from "./NavbarSearch";
 import NavbarAccount from "./NavbarAccount";
 import { JwtPayload } from "@/models/JwtPayload";
-import { useRouter } from "next/navigation";
 import { useUser } from "@/contexts/UserContext";
+import NotificationBell from "./NavbarBell";
 
 const NAV_ITEMS = [
   { label: "Home", href: "/" },
@@ -21,15 +21,29 @@ const NAV_ITEMS = [
   { label: "Contact", href: "/contact" },
 ];
 
+type NotiDoc = {
+  _id: string;
+  status: "UNREAD" | "READ" | "ARCHIVED";
+  type: string;
+  title: string;
+  body: string;
+  data?: Record<string, unknown>;
+  createdAt: string;
+};
+
 export default function NavbarClient({
   user,
+  initialItems,
+  initialUnread,
 }: {
   user: JwtPayload | null;
+  initialItems: NotiDoc[];
+  initialUnread: number;
 }): React.ReactElement {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const { setUser } = useUser();
-
+  const { userDetail, setUserDetail } = useUser();
+  
   useEffect(() => {
     const handleScroll = () => {
       if (window.scrollY > 50) {
@@ -52,7 +66,7 @@ export default function NavbarClient({
       credentials: "include",
     });
 
-    setUser(null);
+    setUserDetail(null);
     // router.push("/auth/login");
     window.location.reload();
     // setUser(null);
@@ -85,6 +99,12 @@ export default function NavbarClient({
           ))}
           <NavbarSearch />
           <NavbarCart />
+          {user?.userId && (
+            <NotificationBell
+              initialItems={initialItems}
+              initialUnread={initialUnread}
+            />
+          )}
           {user?.storeId && (
             <Link href="/store/dashboard">
               <svg
@@ -111,7 +131,11 @@ export default function NavbarClient({
           )}
 
           {user ? (
-            <NavbarAccount user={user} onLogout={handleLogout} />
+            <NavbarAccount
+              user={user}
+              userDetail={userDetail}
+              onLogout={handleLogout}
+            />
           ) : (
             <Link
               href={"/auth/login"}

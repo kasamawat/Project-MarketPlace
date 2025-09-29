@@ -26,6 +26,9 @@ const fmt = (n?: number) =>
     ? n.toLocaleString("th-TH", { minimumFractionDigits: 0 })
     : "—";
 
+const getSkuPrimaryUrl = (s: SkuPublic) =>
+  s?.cover?.url || s?.images?.[0]?.url || s?.image || "";
+
 export default function ClientProductDetail({ product, skus }: Props) {
   console.log(product, "product");
   console.log(skus, "skus");
@@ -40,6 +43,11 @@ export default function ClientProductDetail({ product, skus }: Props) {
   const [selectedOptions, setSelectedOptions] = useState<
     Record<string, string>
   >({});
+
+  // For image
+  const pageSize = 4;
+  const [activeIdx, setActiveIdx] = useState(0);
+  const [thumbStart, setThumbStart] = useState(0);
 
   // ====== จาก SKUs -> fields/options ======
   // fields = ชื่อ attribute ทั้งหมด (Color/Size/…)
@@ -64,23 +72,6 @@ export default function ClientProductDetail({ product, skus }: Props) {
     }
     return map;
   }, [fields, skus]);
-
-  // helper: ตรวจว่า option ใช้ได้ภายใต้ selection ปัจจุบัน
-  // const isOptionAvailable = (field: string, opt: string) => {
-  //   return skus.some((s) => {
-  //     if (s.purchasable === false) return false;
-  //     if ((s.attributes?.[field] ?? "") !== opt) return false;
-
-  //     // ต้องตรงกับ selection ปัจจุบันทุก field (ยกเว้น field ที่กำลังเช็ค)
-  //     const okOtherFields = Object.entries(selectedOptions).every(([k, v]) =>
-  //       k === field ? true : (s.attributes?.[k] ?? "") === v
-  //     );
-  //     if (!okOtherFields) return false;
-
-  //     // ต้องมีสต็อกให้เลือก
-  //     return (s.available ?? 0) > 0;
-  //   });
-  // };
 
   const optionAvailMap = useMemo(() => {
     const map: Record<string, Record<string, number>> = {};
@@ -142,22 +133,201 @@ export default function ClientProductDetail({ product, skus }: Props) {
       ? `฿ ${fmt(product.priceFrom)} - ${fmt(product.priceTo)}`
       : `฿ ${fmt(product.priceFrom ?? product.priceTo)}`;
 
+  // สร้างลิสต์แกลเลอรี (เหมือนเดิม)
+  const gallery = useMemo(() => {
+    const urls: string[] = [];
+    if (product.cover?.url) urls.push(product.cover.url);
+    if (product.image) urls.push(product.image);
+    for (const s of skus) {
+      const u = s?.cover?.url || s?.images?.[0]?.url || s?.image || "";
+      if (u) urls.push(u);
+    }
+    return Array.from(new Set(urls)); // unique ตามลำดับเดิม
+  }, [product.cover?.url, product.image, skus]);
+
+  // รีเซ็ต/ปรับ thumbStart ให้ถูกเมื่อจำนวนรูปเปลี่ยน และให้ active อยู่ในหน้าต่างเสมอ
+  useEffect(() => {
+    if (!gallery.length) return;
+
+    // 1) exact match ก่อน
+    if (matchedSku) {
+      const u = getSkuPrimaryUrl(matchedSku);
+      if (u) {
+        const idx = gallery.indexOf(u);
+        if (idx >= 0) {
+          setActiveIdx(idx);
+          return;
+        }
+      }
+    }
+
+    // 2) partial match (ตรงตามที่เลือกบางส่วน)
+    const partialUrls = skus
+      .filter((s) => s.purchasable !== false)
+      .filter((s) => isPartialMatch(s.attributes, selectedOptions))
+      .map(getSkuPrimaryUrl)
+      .filter(Boolean) as string[];
+
+    for (const u of partialUrls) {
+      const idx = gallery.indexOf(u);
+      if (idx >= 0) {
+        setActiveIdx(idx);
+        return;
+      }
+    }
+
+    // 3) ไม่พบ → คงรูปเดิม
+  }, [selectedOptions, matchedSku, skus, gallery]);
+
+  // thumbnails 4 ช่องปัจจุบัน (เลื่อนทีละ 1, วนรอบ)
+  const thumbs = useMemo(() => {
+    const n = gallery.length;
+    if (!n) return [];
+    const count = Math.min(pageSize, n);
+    return Array.from({ length: count }, (_, i) => {
+      const idx = (thumbStart + i) % n;
+      return { idx, url: gallery[idx] };
+    });
+  }, [gallery, thumbStart]);
+
+  // ปุ่มเลื่อนซ้าย/ขวา (ทีละ 1, วนรอบ)
+  const canSlide = gallery.length > pageSize;
+  const slideLeft = () =>
+    setThumbStart((s) => (s - 1 + gallery.length) % gallery.length);
+  const slideRight = () => setThumbStart((s) => (s + 1) % gallery.length);
+
+  // helper: เช็คว่าดัชนีอยู่ในหน้าต่าง thumbnail ปัจจุบันไหม
+  const isInThumbWindow = (idx: number, start: number) => {
+    const n = gallery.length;
+    const count = Math.min(pageSize, n);
+    for (let i = 0; i < count; i++) {
+      if ((start + i) % n === idx) return true;
+    }
+    return false;
+  };
+
   return (
     <div className="flex flex-col md:flex-row gap-6 h-full">
-      <div className="p-4 grid grid-cols-3 gap-4">
-        {/* รูป */}
-        <div className="col-span-1 w-full pl-6 pr-6">
-          <Image
-            src={product.image || "/no-image.png"}
-            alt={product.name}
-            width={400}
-            height={300}
-            className="w-full h-96 object-cover rounded border border-gray-700"
-          />
+      <div className="p-4 grid grid-cols-5 gap-4">
+        {/* รูป + แกลเลอรี (ไม่สกรอลล์) */}
+        <div className="col-span-2 w-full px-2">
+          {/* รูปใหญ่ พร้อมปุ่มซ้าย/ขวา เปลี่ยนทีละรูป */}
+          <div className="relative w-full aspect-[1] rounded border border-gray-700 overflow-hidden">
+            <Image
+              src={gallery[activeIdx] || "/no-image.png"}
+              alt={product.name}
+              fill
+              sizes="(max-width: 768px) 100vw, 400px"
+              className="object-cover"
+              unoptimized
+              loader={(p) => p.src}
+            />
+
+            {gallery.length > 1 && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const n = gallery.length;
+                    if (!n) return;
+                    setActiveIdx((prev) => {
+                      const next = (prev - 1 + n) % n;
+                      setThumbStart((s) =>
+                        isInThumbWindow(next, s) ? s : (s - 1 + n) % n
+                      );
+                      return next;
+                    });
+                  }}
+                  className="absolute left-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/60 cursor-pointer"
+                  aria-label="Previous image"
+                  title="ก่อนหน้า"
+                >
+                  ‹
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const n = gallery.length;
+                    if (!n) return;
+                    setActiveIdx((prev) => {
+                      const next = (prev + 1) % n;
+                      setThumbStart((s) =>
+                        isInThumbWindow(next, s) ? s : (s + 1) % n
+                      );
+                      return next;
+                    });
+                  }}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/60 cursor-pointer"
+                  aria-label="Next image"
+                  title="ถัดไป"
+                >
+                  ›
+                </button>
+              </>
+            )}
+          </div>
+
+          {/* แถว thumbnails โชว์สูงสุด 4 รูป พร้อมปุ่มเลื่อนหน้า */}
+          {gallery.length > 1 && (
+            <div className="mt-3 flex items-center gap-2">
+              <button
+                type="button"
+                disabled={!canSlide}
+                onClick={slideLeft}
+                className={`h-8 w-8 rounded bg-gray-800 text-white flex items-center justify-center ${
+                  canSlide
+                    ? "hover:bg-gray-700 cursor-pointer"
+                    : "opacity-40 cursor-not-allowed"
+                }`}
+                aria-label="ก่อนหน้า"
+              >
+                ‹
+              </button>
+
+              {thumbs.map(({ url, idx }) => (
+                <button
+                  key={`${idx}-${url}`}
+                  type="button"
+                  onClick={() => setActiveIdx(idx)}
+                  className={`relative h-16 w-16 flex-none rounded overflow-hidden border ${
+                    idx === activeIdx
+                      ? "border-indigo-500 ring-2 ring-indigo-500"
+                      : "border-gray-700 hover:border-gray-500 cursor-pointer"
+                  }`}
+                  title={`ภาพ ${idx + 1}`}
+                >
+                  <Image
+                    src={url}
+                    alt=""
+                    fill
+                    sizes="64px"
+                    className="object-cover"
+                    unoptimized
+                    loader={(p) => p.src}
+                  />
+                </button>
+              ))}
+
+              <button
+                type="button"
+                disabled={!canSlide}
+                onClick={slideRight}
+                className={`h-8 w-8 rounded bg-gray-800 text-white flex items-center justify-center ${
+                  canSlide
+                    ? "hover:bg-gray-700 cursor-pointer"
+                    : "opacity-40 cursor-not-allowed"
+                }`}
+                aria-label="ถัดไป"
+              >
+                ›
+              </button>
+            </div>
+          )}
         </div>
 
         {/* เนื้อหา */}
-        <div className="col-span-2 w-full pl-6 pr-6">
+        <div className="col-span-3 w-full pl-6 pr-6">
           <h2 className="text-xl font-bold mb-2 text-white">{product.name}</h2>
 
           <div className="mb-2">
@@ -260,7 +430,7 @@ export default function ClientProductDetail({ product, skus }: Props) {
                 }`}
               >
                 <button
-                  className={`text-lg font-bold text-white px-3 ${
+                  className={`text-lg font-bold text-white ${
                     !matchedSku ? "" : "cursor-pointer"
                   }`}
                   onClick={() => setCount((prev) => Math.max(1, prev - 1))}
@@ -275,7 +445,7 @@ export default function ClientProductDetail({ product, skus }: Props) {
                   className="w-10 text-center bg-transparent text-white outline-none mx-2"
                 />
                 <button
-                  className={`text-lg font-bold text-white px-3 ${
+                  className={`text-lg font-bold text-white ${
                     matchedSku ? "cursor-pointer" : ""
                   }`}
                   onClick={() =>
@@ -316,6 +486,7 @@ export default function ClientProductDetail({ product, skus }: Props) {
                       name: product.name,
                       image: product.image,
                       store: product.store, // { id/slug/name } ถ้ามี
+                      cover: product.cover,
                       skuCount: skus.length,
                     },
                     sku: matchedSku,
