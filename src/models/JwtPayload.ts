@@ -3,5 +3,4 @@ export interface JwtPayload {
   email: string;
   username: string;
   storeId?: string;
-  // เพิ่ม fields ตาม JWT ของคุณ
 }

@@ -254,7 +254,7 @@ export default function ClientOrderDetail({
               ) : storeOrder.buyerStatus === "paid" ? (
                 <Link
                   href={`/account/orders/${storeOrder.masterOrderId}/invoice`}
-                  className="mt-2 inline-flex w-full items-center justify-center rounded-md border border-gray-600 px-4 py-2 text-gray-100 hover:bg-gray-800"
+                  className="opacity-50 pointer-events-none mt-2 inline-flex w-full items-center justify-center rounded-md border border-gray-600 px-4 py-2 text-gray-100 hover:bg-gray-800"
                 >
                   View/Print Invoice
                 </Link>
